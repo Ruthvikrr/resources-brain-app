@@ -4,7 +4,8 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import * as cheerio from 'cheerio';
-import pdfParse from 'pdf-parse';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pdfParse = require('pdf-parse');
 import { generateEmbedding } from '@/agents/Retriever/embeddingLayer';
 
 // Configure Groq
