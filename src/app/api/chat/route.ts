@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     });
 
     // Return a readable text stream directly to the Next.js UI
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
     
   } catch (err: any) {
     console.error("Chat Error:", err);
