@@ -4,10 +4,6 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import * as cheerio from 'cheerio';
-// @ts-ignore
-import pdfParse from 'pdf-parse';
-import { generateEmbedding } from '@/agents/Retriever/embeddingLayer';
-
 // Configure Groq
 const groq = createOpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
@@ -21,7 +17,6 @@ const supabase = createClient(
 );
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // Extend Vercel Serverless timeout to maximum allowed on hobby tiers for deep analysis
 export async function POST(req: Request) {
   try {
     const formData = await req.formData();
@@ -43,7 +38,9 @@ export async function POST(req: Request) {
       const buffer = Buffer.from(arrayBuffer);
       
       try {
-        const pdfData = await pdfParse(buffer);
+        // @ts-ignore
+        const pdfParse = (await import('pdf-parse')).default || await import('pdf-parse');
+        const pdfData = await (pdfParse as any)(buffer);
         // Clean out binary garbage but KEEP standard unicode (bullets, quotes, emojis, etc)
         cleanText = pdfData.text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '').replace(/\s+/g, ' ').trim().substring(0, 5000);
       } catch (e) {
@@ -113,6 +110,7 @@ export async function POST(req: Request) {
 
     // Step 3: Run the local Embedding Agent to calculate its Mathematical Vectors
     console.log("Generating semantic vectors for RAG...");
+    const { generateEmbedding } = await import('@/agents/Retriever/embeddingLayer');
     const vectorMath = await generateEmbedding(object.summary);
 
     // Step 4: Save EVERYTHING to Supabase Memory Cache (including Vectors)
