@@ -73,7 +73,6 @@ export async function POST(req: Request) {
     // Step 2: Use Groq LLM to analyze and categorize the data instantly
     const { text } = await generateText({
       model: groq('llama-3.1-8b-instant'),
-      maxTokens: 1000,
       prompt: `You are an expert curator organizing a massive knowledge base. 
       Read the following text extracted from a webpage and classify it, summarize it, and generate tags for it.
       
