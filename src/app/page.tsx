@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Brain, LayoutGrid, List, Search, GitBranch, Briefcase, Wrench, FileText, Video, FileCheck, RefreshCw, Paperclip, X, Bot, User, Trash2 } from "lucide-react";
-import { useChat } from "@ai-sdk/react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -52,18 +51,62 @@ export default function Home() {
     refreshStats();
   }, []);
 
-  // Hook up exactly to our new Retriever Agent API endpoint!
-  const { messages, input: chatInput, handleInputChange: handleChatInput, handleSubmit, isLoading: isChatting, setMessages } = useChat({
-    api: '/api/chat',
-    body: {
-      resourceId: focusedResource?.id // 🧠 Targeted Chat payload!
-    }
-  });
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatting, setIsChatting] = useState(false);
 
-  const handleChatSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleChatInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setChatInput(e.target.value);
+  };
+
+  const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Stop the browser from doing a nasty 'GET /?' page reload!
     if (!chatInput || !chatInput.trim()) return;
-    handleSubmit(e);
+
+    // Local echo
+    const prompt = chatInput.trim();
+    const newMessages = [...messages, { role: 'user', content: prompt, id: String(Date.now()) }];
+    setMessages(newMessages);
+    setChatInput("");
+    setIsChatting(true);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: newMessages,
+          resourceId: focusedResource?.id // 🧠 Targeted Chat payload!
+        })
+      });
+
+      if (!response.ok) throw new Error(response.statusText);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      let aiResponseText = "";
+      setMessages((prev) => [...prev, { role: 'assistant', content: "", id: String(Date.now() + 1) }]);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        // Vercel SDK `toTextStreamResponse()` provides raw text chunks!
+        aiResponseText += decoder.decode(value, { stream: true });
+        
+        setMessages((prev) => {
+          const next = [...prev];
+          next[next.length - 1].content = aiResponseText;
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsChatting(false);
+    }
   };
 
   const handleAnalyze = async () => {
