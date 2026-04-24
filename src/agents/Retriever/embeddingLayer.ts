@@ -1,7 +1,8 @@
-import { pipeline } from '@xenova/transformers';
+import { pipeline, env } from '@xenova/transformers';
 
-// We use a singleton pattern so Next.js doesn't try to download the 
-// HuggingFace AI model into memory every single time you hit the API!
+// Very Important for Vercel deployment! Vercel strictly prohibits writing files anywhere except /tmp/
+// If we don't set this, the Transformer AI pipeline will violently crash when attempting to download models.
+env.cacheDir = '/tmp/.cache';
 class EmbeddingPipeline {
   static task = 'feature-extraction';
   static model = 'Xenova/all-MiniLM-L6-v2'; // The exact 384-dimensional architecture our Supabase SQL matches
