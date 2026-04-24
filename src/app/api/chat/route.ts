@@ -16,6 +16,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
 );
 
+export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Extend Vercel Serverless timeout to maximum allowed on hobby tiers
 export async function POST(req: Request) {
   try {

@@ -4,8 +4,8 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 import * as cheerio from 'cheerio';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require('pdf-parse');
+// @ts-ignore
+import pdfParse from 'pdf-parse';
 import { generateEmbedding } from '@/agents/Retriever/embeddingLayer';
 
 // Configure Groq
@@ -20,6 +20,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
 );
 
+export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // Extend Vercel Serverless timeout to maximum allowed on hobby tiers for deep analysis
 export async function POST(req: Request) {
   try {

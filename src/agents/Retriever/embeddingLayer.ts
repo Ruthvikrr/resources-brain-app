@@ -3,6 +3,12 @@ import { pipeline, env } from '@xenova/transformers';
 // Very Important for Vercel deployment! Vercel strictly prohibits writing files anywhere except /tmp/
 // If we don't set this, the Transformer AI pipeline will violently crash when attempting to download models.
 env.cacheDir = '/tmp/.cache';
+env.allowLocalModels = false;
+env.useBrowserCache = false;
+// Force WASM execution on Vercel to avoid large Node ONNX binary module crashes
+if (env.backends && env.backends.onnx) {
+  env.backends.onnx.wasm.numThreads = 1;
+}
 class EmbeddingPipeline {
   static task = 'feature-extraction';
   static model = 'Xenova/all-MiniLM-L6-v2'; // The exact 384-dimensional architecture our Supabase SQL matches
