@@ -88,61 +88,77 @@ export async function POST(req: Request) {
       console.log("Fetching URL via AI Reader Engine:", url);
       
       try {
-        // 🚀 Primary: Specialized Social Media Metadata Extraction
-        // We use a "Social Bot" identity and DISABLE redirects to avoid being sucked into the login wall.
-        const socialResponse = await fetch(url, { 
-          headers: { 
-            'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
-          },
-          // We don't want to be redirected to /accounts/login/
-          redirect: 'follow' 
-        });
+        // 📸 SPECIALIZED INSTAGRAM HANDLER (Embed Bypass Method)
+        const igRegex = /instagram\.com\/(?:p|reel|tv|stories)\/([^/?#&]+)/;
+        const igMatch = url.match(igRegex);
         
-        const socialHtml = await socialResponse.text();
-        const $social = cheerio.load(socialHtml);
-        
-        // Hunt for the "Real" content in metadata
-        const ogDescription = $social('meta[property="og:description"]').attr('content') || 
-                            $social('meta[name="description"]').attr('content');
-        const ogTitle = $social('meta[property="og:title"]').attr('content') || 
-                        $social('title').text();
-        
-        // Validation: If it says "Login", it's the wrong page
-        if (ogDescription && ogDescription.length > 20 && !ogDescription.includes("Login • Instagram")) {
-          cleanText = `Source: ${ogTitle}\nContent: ${ogDescription}`;
-          pageTitle = ogTitle;
-          console.log("Successfully extracted Social Metadata via Bot Identity.");
+        if (igMatch) {
+          const shortcode = igMatch[1];
+          console.log("Instagram shortcode detected:", shortcode);
+          const embedUrl = `https://www.instagram.com/p/${shortcode}/embed/captioned/`;
+          
+          const embedRes = await fetch(embedUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+          });
+          
+          const embedHtml = await embedRes.text();
+          const $ig = cheerio.load(embedHtml);
+          
+          // The caption is stored in a very specific div in the embed view
+          const igCaption = $ig('.CaptionText').text().trim() || $ig('.Caption').text().trim();
+          const igUser = $ig('.UsernameText').text().trim();
+
+          if (igCaption) {
+            cleanText = `Instagram Post by @${igUser}\n\nCaption: ${igCaption}`;
+            pageTitle = `Instagram Reel by ${igUser}`;
+            console.log("Successfully bypassed Instagram wall via Embed method!");
+          } else {
+            throw new Error("Embed bypass failed to find caption.");
+          }
         } else {
-          throw new Error("Metadata check failed or Login Wall detected.");
+          throw new Error("Not an Instagram link or shortcode missing.");
         }
-      } catch (socialError) {
-        console.warn("Social crawler failed. Trying Jina Reader with aggressive headers...", socialError);
+      } catch (igError) {
+        console.warn("Instagram Embed Bypass failed. Trying Social Bot fallback...", igError);
         
         try {
-          const readerResponse = await fetch(`https://r.jina.ai/${url}`, {
+          // 🚀 Secondary: Social Bot Identity
+          const socialResponse = await fetch(url, { 
             headers: { 
-              'Accept': 'application/json',
-              'X-No-Cache': 'true'
+              'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+              'Accept': 'text/html'
             }
           });
           
-          if (readerResponse.ok) {
-            const readerData = await readerResponse.json();
-            cleanText = readerData.data?.content || "";
-            pageTitle = readerData.data?.title || url;
-            
-            // Final check to see if we got the login page
-            if (cleanText.includes("Welcome back to Instagram") || cleanText.includes("Log in to Instagram")) {
-              throw new Error("Jina also hit the login wall.");
-            }
+          const socialHtml = await socialResponse.text();
+          const $social = cheerio.load(socialHtml);
+          const ogDescription = $social('meta[property="og:description"]').attr('content');
+          const ogTitle = $social('meta[property="og:title"]').attr('content');
+          
+          if (ogDescription && !ogDescription.includes("Login")) {
+            cleanText = `Source: ${ogTitle}\nContent: ${ogDescription}`;
+            pageTitle = ogTitle || url;
           } else {
-            throw new Error("Reader failed");
+            throw new Error("Social crawler blocked.");
           }
-        } catch (error) {
-          console.warn("All link-based scrapers failed.", error);
-          cleanText = "The AI was blocked by Instagram's login wall. PRO TIP: If this is a private or protected post, take a screenshot and upload the image file directly! I can now read text from images using Vision AI.";
-          pageTitle = "Blocked by Instagram Login Wall";
+        } catch (socialError) {
+          // ... (Jina Reader fallback)
+          try {
+            const readerResponse = await fetch(`https://r.jina.ai/${url}`, {
+              headers: { 'Accept': 'application/json' }
+            });
+            if (readerResponse.ok) {
+              const readerData = await readerResponse.json();
+              cleanText = readerData.data?.content || "";
+              pageTitle = readerData.data?.title || url;
+              if (cleanText.includes("Welcome back to Instagram")) throw new Error("Jina blocked");
+            } else {
+              throw new Error("Reader failed");
+            }
+          } catch (error) {
+            cleanText = "The AI was blocked by Instagram's login wall. PRO TIP: If this is a private or protected post, take a screenshot and upload the image file directly! I can now read text from images using Vision AI.";
+            pageTitle = "Protected Content (Login Required)";
+          }
         }
       }
     }
