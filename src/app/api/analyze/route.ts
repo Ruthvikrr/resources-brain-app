@@ -72,34 +72,49 @@ export async function POST(req: Request) {
       }
       pageTitle = file.name;
     } else if (url) {
-      console.log("Fetching URL:", url);
-      const response = await fetch(url, { 
-        headers: { 
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+      console.log("Fetching URL via AI Reader Engine:", url);
+      
+      try {
+        // 🚀 High-Performance Reader Agent Integration
+        // This bypasses login walls and JavaScript rendering issues on Instagram, Twitter, etc.
+        const readerResponse = await fetch(`https://r.jina.ai/${url}`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (readerResponse.ok) {
+          const readerData = await readerResponse.json();
+          cleanText = readerData.data?.content || "";
+          pageTitle = readerData.data?.title || url;
+          console.log("Successfully extracted clean data via AI Reader.");
+        } else {
+          throw new Error("Reader failed, falling back to local scraper");
         }
-      });
-      const html = await response.text();
-      
-      const $ = cheerio.load(html);
-      
-      // 🕵️ Extract Metadata (Crucial for Social Media links like Instagram/Twitter)
-      const ogTitle = $('meta[property="og:title"]').attr('content');
-      const ogDescription = $('meta[property="og:description"]').attr('content');
-      const metaDescription = $('meta[name="description"]').attr('content');
-      const siteName = $('meta[property="og:site_name"]').attr('content');
+      } catch (error) {
+        console.warn("AI Reader Engine failed. Using local Cheerio scraper fallback.", error);
+        
+        // 🛡️ Local Fallback Scraper (Standard metadata extraction)
+        const response = await fetch(url, { 
+          headers: { 
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          }
+        });
+        const html = await response.text();
+        const $ = cheerio.load(html);
+        
+        const ogTitle = $('meta[property="og:title"]').attr('content');
+        const ogDescription = $('meta[property="og:description"]').attr('content');
+        const metaDescription = $('meta[name="description"]').attr('content');
 
-      // Remove scripts, styles, nav, and footers to keep it clean
-      $('script, style, nav, footer, header').remove();
-      const bodyText = $('body').text().replace(/\s+/g, ' ').trim(); 
+        $('script, style, nav, footer, header').remove();
+        const bodyText = $('body').text().replace(/\s+/g, ' ').trim(); 
 
-      // Combine metadata with body text for maximum context
-      cleanText = [ogTitle, ogDescription, metaDescription, bodyText]
-        .filter(Boolean)
-        .join('\n')
-        .substring(0, 6000);
+        cleanText = [ogTitle, ogDescription, metaDescription, bodyText]
+          .filter(Boolean)
+          .join('\n')
+          .substring(0, 6000);
 
-      pageTitle = ogTitle || $('title').text() || (siteName ? `${siteName} Post` : url);
+        pageTitle = ogTitle || $('title').text() || url;
+      }
     }
 
     console.log(`Extracted total text length to analyze: ${cleanText.length} characters.`);
