@@ -363,7 +363,7 @@ export default function Home() {
           )}
 
           {/* The Data Grid */}
-          {messages.length === 0 && resources.length > 0 && (
+          {resources.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {resources
                  .filter(r => activeCategory === "All" || r.category === activeCategory)
