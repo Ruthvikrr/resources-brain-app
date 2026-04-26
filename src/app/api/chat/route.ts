@@ -58,9 +58,15 @@ export async function POST(req: Request) {
       }
     }
 
+    // Ensure messages array is perfectly sanitized for Groq (no extraneous fields like IDs)
+    const cleanMessages = messages.map((m: any) => ({
+      role: m.role,
+      content: m.content
+    }));
+
     // 4. Fire the Groq LLM with the context and stream the answer back to the UI smoothly!
     const result = await streamText({
-      model: groq('llama-3.1-8b-instant'),
+      model: groq('llama-3.3-70b-versatile'), // Upgraded to 70B for massive 128k context window and elite reasoning
       system: `You are the Resource Brain Assistant, an elite, highly intelligent knowledge-synthesizing AI.
       You are speaking directly to the user who owns this data. Your sole purpose is to analyze the provided Context Knowledge (which is exact data extracted from their personal saved resources, PDFs, and links) and answer their questions flawlessly.
       
@@ -75,7 +81,7 @@ export async function POST(req: Request) {
       ===================================
       ${contextData}
       ===================================`,
-      messages,
+      messages: cleanMessages,
     });
 
     // Return a readable text stream directly to the Next.js UI
