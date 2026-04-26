@@ -73,15 +73,33 @@ export async function POST(req: Request) {
       pageTitle = file.name;
     } else if (url) {
       console.log("Fetching URL:", url);
-      const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }});
+      const response = await fetch(url, { 
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+        }
+      });
       const html = await response.text();
       
       const $ = cheerio.load(html);
+      
+      // 🕵️ Extract Metadata (Crucial for Social Media links like Instagram/Twitter)
+      const ogTitle = $('meta[property="og:title"]').attr('content');
+      const ogDescription = $('meta[property="og:description"]').attr('content');
+      const metaDescription = $('meta[name="description"]').attr('content');
+      const siteName = $('meta[property="og:site_name"]').attr('content');
+
       // Remove scripts, styles, nav, and footers to keep it clean
       $('script, style, nav, footer, header').remove();
-      cleanText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 5000); 
+      const bodyText = $('body').text().replace(/\s+/g, ' ').trim(); 
 
-      pageTitle = $('title').text() || url;
+      // Combine metadata with body text for maximum context
+      cleanText = [ogTitle, ogDescription, metaDescription, bodyText]
+        .filter(Boolean)
+        .join('\n')
+        .substring(0, 6000);
+
+      pageTitle = ogTitle || $('title').text() || (siteName ? `${siteName} Post` : url);
     }
 
     console.log(`Extracted total text length to analyze: ${cleanText.length} characters.`);
