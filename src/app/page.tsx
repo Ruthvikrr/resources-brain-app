@@ -31,9 +31,9 @@ export default function Home() {
       setResources(data);
       setStats({
         total: data.length,
-        documents: data.filter(r => r.category === 'PDF' || r.source_type === 'document').length,
-        jobs: data.filter(r => r.category === 'Job').length,
-        tools: data.filter(r => r.category === 'Tool').length,
+        documents: data.filter((r: any) => r.category === 'PDF' || r.source_type === 'document').length,
+        jobs: data.filter((r: any) => r.category === 'Job').length,
+        tools: data.filter((r: any) => r.category === 'Tool').length,
       });
       }
     } catch (e) {
@@ -370,7 +370,7 @@ export default function Home() {
           {resources.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                {resources
-                 .filter(r => activeCategory === "All" || r.category === activeCategory)
+                 .filter((r: any) => activeCategory === "All" || r.category === activeCategory)
                  .map((item) => (
                    <div key={item.id} className="bg-surface border border-border rounded-xl p-5 hover:border-accent transition-colors flex flex-col">
                       <div className="flex justify-between items-start mb-3">
