@@ -31,12 +31,35 @@ export async function POST(req: Request) {
     let pageTitle = "";
     let targetUrl = url || "";
 
-    // Step 1: Extract Text from the input
+    // Step 1: Extract Text from the input and handle file storage
     if (file) {
       console.log("Parsing File:", file.name);
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       
+      // 📂 Save File to Supabase Storage Bucket ('documents')
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error("Storage Upload Error:", uploadError);
+        // We continue even if upload fails, but the URL will be empty
+      } else {
+        const { data: { publicUrl } } = supabase.storage
+          .from('documents')
+          .getPublicUrl(filePath);
+        targetUrl = publicUrl;
+        console.log("File uploaded to storage:", targetUrl);
+      }
+
       try {
         // @ts-ignore
         const pdfParse = (await import('pdf-parse')).default || await import('pdf-parse');
