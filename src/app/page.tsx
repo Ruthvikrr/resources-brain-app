@@ -392,10 +392,10 @@ export default function Home() {
                               href={item.url} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="hover:text-accent transition-colors p-1 ml-1"
+                              className="text-text-primary hover:text-accent hover:bg-surface-2 transition-all p-1.5 ml-2 rounded-md bg-surface border border-border flex items-center justify-center shadow-sm"
                               title="Visit Original Link"
                             >
-                              <ExternalLink size={13} />
+                              <ExternalLink size={16} strokeWidth={2.5} />
                             </a>
                           )}
                           <button 
