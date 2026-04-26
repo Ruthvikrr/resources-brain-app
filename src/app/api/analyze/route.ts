@@ -75,45 +75,58 @@ export async function POST(req: Request) {
       console.log("Fetching URL via AI Reader Engine:", url);
       
       try {
-        // 🚀 High-Performance Reader Agent Integration
-        // This bypasses login walls and JavaScript rendering issues on Instagram, Twitter, etc.
-        const readerResponse = await fetch(`https://r.jina.ai/${url}`, {
-          headers: { 'Accept': 'application/json' }
-        });
-        
-        if (readerResponse.ok) {
-          const readerData = await readerResponse.json();
-          cleanText = readerData.data?.content || "";
-          pageTitle = readerData.data?.title || url;
-          console.log("Successfully extracted clean data via AI Reader.");
-        } else {
-          throw new Error("Reader failed, falling back to local scraper");
-        }
-      } catch (error) {
-        console.warn("AI Reader Engine failed. Using local Cheerio scraper fallback.", error);
-        
-        // 🛡️ Local Fallback Scraper (Standard metadata extraction)
-        const response = await fetch(url, { 
+        // 🚀 Primary: Specialized Social Media Metadata Extraction (Bypasses Login Walls)
+        // We use the 'facebookexternalhit' User-Agent because Instagram/Meta ALWAYS 
+        // allows their own crawler to see the caption/title for link previews.
+        const socialResponse = await fetch(url, { 
           headers: { 
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            'Accept': 'text/html'
           }
         });
-        const html = await response.text();
-        const $ = cheerio.load(html);
         
-        const ogTitle = $('meta[property="og:title"]').attr('content');
-        const ogDescription = $('meta[property="og:description"]').attr('content');
-        const metaDescription = $('meta[name="description"]').attr('content');
-
-        $('script, style, nav, footer, header').remove();
-        const bodyText = $('body').text().replace(/\s+/g, ' ').trim(); 
-
-        cleanText = [ogTitle, ogDescription, metaDescription, bodyText]
-          .filter(Boolean)
-          .join('\n')
-          .substring(0, 6000);
-
-        pageTitle = ogTitle || $('title').text() || url;
+        const socialHtml = await socialResponse.text();
+        const $social = cheerio.load(socialHtml);
+        
+        const ogTitle = $social('meta[property="og:title"]').attr('content');
+        const ogDescription = $social('meta[property="og:description"]').attr('content');
+        
+        // If we successfully found the social caption, use it!
+        if (ogDescription && ogDescription.length > 10 && !ogDescription.includes("Login")) {
+          cleanText = `Post Title: ${ogTitle || ""}\nCaption/Description: ${ogDescription}`;
+          pageTitle = ogTitle || url;
+          console.log("Successfully extracted Social Metadata via Facebook Crawler bypass.");
+        } else {
+          throw new Error("Social crawler blocked, trying Jina Reader");
+        }
+      } catch (socialError) {
+        console.warn("Social crawler failed or returned empty. Trying Jina Reader...", socialError);
+        
+        try {
+          // 🚀 Secondary: High-Performance Reader Agent Integration
+          const readerResponse = await fetch(`https://r.jina.ai/${url}`, {
+            headers: { 'Accept': 'application/json' }
+          });
+          
+          if (readerResponse.ok) {
+            const readerData = await readerResponse.json();
+            cleanText = readerData.data?.content || "";
+            pageTitle = readerData.data?.title || url;
+            console.log("Successfully extracted data via Jina Reader.");
+          } else {
+            throw new Error("Reader failed");
+          }
+        } catch (error) {
+          console.warn("All advanced scrapers failed. Using basic local fallback.", error);
+          
+          // 🛡️ Final Fallback: Standard Cheerio
+          const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+          const html = await response.text();
+          const $ = cheerio.load(html);
+          $('script, style, nav, footer, header').remove();
+          cleanText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 5000);
+          pageTitle = $('title').text() || url;
+        }
       }
     }
 
