@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Brain, LayoutGrid, List, Search, GitBranch, Briefcase, Wrench, FileText, Video, FileCheck, RefreshCw, Paperclip, X, Bot, User, Trash2 } from "lucide-react";
+import { Brain, LayoutGrid, List, Search, GitBranch, Briefcase, Wrench, FileText, Video, FileCheck, RefreshCw, Paperclip, X, Bot, User, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -387,6 +387,17 @@ export default function Home() {
                           <span className="text-[10px]">
                             {new Date(item.created_at).toLocaleDateString()}
                           </span>
+                          {item.url && (
+                            <a 
+                              href={item.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="hover:text-accent transition-colors p-1 ml-1"
+                              title="Visit Original Link"
+                            >
+                              <ExternalLink size={13} />
+                            </a>
+                          )}
                           <button 
                             onClick={() => handleDelete(item.id)}
                             className="hover:text-red-500 transition-colors p-1"
