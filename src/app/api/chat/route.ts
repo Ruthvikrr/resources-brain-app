@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { streamText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
-import { generateEmbedding } from '@/agents/Retriever/embeddingLayer';
 
 // Configure Groq
 const groq = createOpenAI({
@@ -38,14 +37,15 @@ export async function POST(req: Request) {
     } 
     // Global AI Mathematical Vector Search (RAG)
     else {
-      // 1. Math: Convert the user's text question into Vector math coordinates
+      // 1. Math: Convert the user's text question into Vector math coordinates dynamically
+      const { generateEmbedding } = await import('@/agents/Retriever/embeddingLayer');
       const queryEmbedding = await generateEmbedding(latestMessage);
 
       // 2. Search: Find the closest memories in Supabase based on math distance
       const { data: matchedResources, error } = await supabase.rpc('match_resources', {
         query_embedding: queryEmbedding,
         match_threshold: 0.1, // Fairly loose to ensure we return *something* related
-        match_count: 4 // Bring back top 4 most relevant files/URLs
+        match_count: 5 // Bring back top 5 most relevant files/URLs
       });
 
       if (error) throw error;
@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       // 3. Construct the RAG Context Knowledge snippet
       if (matchedResources && matchedResources.length > 0) {
         contextData = matchedResources.map((res: any) => 
-          `Title: ${res.title}\nURL: ${res.url}\nSummary: ${res.summary}\nExtracted Text: ${res.content?.substring(0, 500)}...`
+          `[Resource: ${res.title}]\nURL: ${res.url}\nSummary: ${res.summary}\nExtracted Content: ${res.content?.substring(0, 1500)}...`
         ).join("\n\n---\n\n");
       }
     }
@@ -61,13 +61,20 @@ export async function POST(req: Request) {
     // 4. Fire the Groq LLM with the context and stream the answer back to the UI smoothly!
     const result = await streamText({
       model: groq('llama-3.1-8b-instant'),
-      system: `You are the Resource Brain Assistant, a highly intelligent curator and knowledge-base search agent.
-      Answer the user's questions strictly using the Context Knowledge provided below. It was just retrieved via Mathematical Vector Search from the user's personal database.
-      If the context does not contain the answer, say "I couldn't find an exact match in your uploaded modules, but here is what I know..."
-      Keep answers structured, highly intelligent, and very readable (use bullets where necessary).
+      system: `You are the Resource Brain Assistant, an elite, highly intelligent knowledge-synthesizing AI.
+      You are speaking directly to the user who owns this data. Your sole purpose is to analyze the provided Context Knowledge (which is exact data extracted from their personal saved resources, PDFs, and links) and answer their questions flawlessly.
+      
+      CRITICAL INSTRUCTIONS:
+      1. DO NOT give generic, hallucinatory answers. Ground your ENTIRE response strictly in the provided Context Knowledge.
+      2. If the user asks a question and the answer is actively found in the Context Knowledge, extract it deeply and explain it with high clarity.
+      3. Use exceptional formatting: break down complex ideas into crisp bullet points, bold important keywords, and keep paragraphs punchy.
+      4. If the Context Knowledge does NOT contain the answer, say EXACTLY: "I couldn't find the exact answer inside your saved resources, but based on my general knowledge..." and then provide the answer.
+      5. Always act like a brilliant research assistant—insightful, precise, and highly professional.
       
       RETRIEVED CONTEXT KNOWLEDGE:
-      ${contextData}`,
+      ===================================
+      ${contextData}
+      ===================================`,
       messages,
     });
 
