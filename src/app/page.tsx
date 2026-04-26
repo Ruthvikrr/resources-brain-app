@@ -44,11 +44,20 @@ export default function Home() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to completely erase this memory from your brain?")) return;
     
-    // Natively delete the row via Supabase UUID
-    await supabase.from('resources').delete().eq('id', id);
-    
-    // Refresh the live grid and AI dynamic sidebars!
-    refreshStats();
+    try {
+      // 🛡️ Securely delete via Backend API (bypasses RLS)
+      const res = await fetch(`/api/resources?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      
+      if (json.success) {
+        // Refresh the live grid and AI dynamic sidebars!
+        refreshStats();
+      } else {
+        alert("Failed to delete resource: " + json.error);
+      }
+    } catch (e) {
+      console.error("Delete failed:", e);
+    }
   };
 
   useEffect(() => {
