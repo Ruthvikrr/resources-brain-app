@@ -19,13 +19,14 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [focusedResource, setFocusedResource] = useState<any | null>(null);
 
-  // Load the real database stats
+  // Load the real database stats securely from the backend API
   const refreshStats = async () => {
-    const { data, error } = await supabase.from('resources').select('*').order('created_at', { ascending: false });
-    if (error) {
-      console.error("Supabase fetch error:", error);
-    }
-    if (data) {
+    try {
+      const res = await fetch('/api/resources');
+      const json = await res.json();
+      if (json.success && json.data) {
+        const data = json.data;
+        console.log("Secure API fetch success data:", data);
       console.log("Supabase fetch success data:", data);
       setResources(data);
       setStats({
@@ -34,6 +35,9 @@ export default function Home() {
         jobs: data.filter(r => r.category === 'Job').length,
         tools: data.filter(r => r.category === 'Tool').length,
       });
+      }
+    } catch (e) {
+      console.error("API fetch failed:", e);
     }
   };
 

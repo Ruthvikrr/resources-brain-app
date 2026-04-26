@@ -110,8 +110,13 @@ export async function POST(req: Request) {
 
     // Step 3: Run the local Embedding Agent to calculate its Mathematical Vectors
     console.log("Generating semantic vectors for RAG...");
-    const { generateEmbedding } = await import('@/agents/Retriever/embeddingLayer');
-    const vectorMath = await generateEmbedding(object.summary);
+    let vectorMath: number[] = new Array(384).fill(0);
+    try {
+      const { generateEmbedding } = await import('@/agents/Retriever/embeddingLayer');
+      vectorMath = await generateEmbedding(object.summary);
+    } catch (vectorError) {
+      console.warn("Embedding Math Engine crashed on Vercel Node Runtime. Safely bypassing to protect data save.", vectorError);
+    }
 
     // Step 4: Save EVERYTHING to Supabase Memory Cache (including Vectors)
     console.log("Saving vectors and metadata to Supabase DB...");
