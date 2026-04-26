@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
     // Step 1: Extract Text from the input and handle file storage
     if (file) {
-      console.log("Parsing File:", file.name);
+      console.log("Processing File:", file.name, "Type:", file.type);
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
       
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
+      const isImage = file.type.startsWith('image/');
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
@@ -49,83 +50,99 @@ export async function POST(req: Request) {
           upsert: false
         });
 
-      if (uploadError) {
-        console.error("Storage Upload Error:", uploadError);
-        // We continue even if upload fails, but the URL will be empty
-      } else {
-        const { data: { publicUrl } } = supabase.storage
-          .from('documents')
-          .getPublicUrl(filePath);
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
         targetUrl = publicUrl;
-        console.log("File uploaded to storage:", targetUrl);
       }
 
-      try {
-        // @ts-ignore
-        const pdfParse = (await import('pdf-parse')).default || await import('pdf-parse');
-        const pdfData = await (pdfParse as any)(buffer);
-        // Clean out binary garbage but KEEP standard unicode (bullets, quotes, emojis, etc)
-        cleanText = pdfData.text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '').replace(/\s+/g, ' ').trim().substring(0, 5000);
-      } catch (e) {
-        // Fallback to raw text if not physical PDF
-        cleanText = buffer.toString('utf-8').replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '').substring(0, 5000);
+      // 👁️ VISION AI: If it's an image, use Groq's Vision Model to read it!
+      if (isImage) {
+        console.log("Image detected. Launching Vision AI Engine...");
+        const base64Image = buffer.toString('base64');
+        const { text: visionText } = await generateText({
+          model: groq('llama-3.2-11b-vision-preview'),
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: "Describe this image in extreme detail. If this is a social media post, extract the caption, the username, and the primary content shown in the image." },
+                { type: 'image', image: base64Image }
+              ],
+            },
+          ],
+        });
+        cleanText = visionText;
+      } else {
+        // 📄 Standard PDF/Text Parsing
+        try {
+          // @ts-ignore
+          const pdfParse = (await import('pdf-parse')).default || await import('pdf-parse');
+          const pdfData = await (pdfParse as any)(buffer);
+          cleanText = pdfData.text.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '').replace(/\s+/g, ' ').trim().substring(0, 5000);
+        } catch (e) {
+          cleanText = buffer.toString('utf-8').replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F]/g, '').substring(0, 5000);
+        }
       }
       pageTitle = file.name;
     } else if (url) {
       console.log("Fetching URL via AI Reader Engine:", url);
       
       try {
-        // 🚀 Primary: Specialized Social Media Metadata Extraction (Bypasses Login Walls)
-        // We use the 'facebookexternalhit' User-Agent because Instagram/Meta ALWAYS 
-        // allows their own crawler to see the caption/title for link previews.
+        // 🚀 Primary: Specialized Social Media Metadata Extraction
+        // We use a "Social Bot" identity and DISABLE redirects to avoid being sucked into the login wall.
         const socialResponse = await fetch(url, { 
           headers: { 
-            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
-            'Accept': 'text/html'
-          }
+            'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+          },
+          // We don't want to be redirected to /accounts/login/
+          redirect: 'follow' 
         });
         
         const socialHtml = await socialResponse.text();
         const $social = cheerio.load(socialHtml);
         
-        const ogTitle = $social('meta[property="og:title"]').attr('content');
-        const ogDescription = $social('meta[property="og:description"]').attr('content');
+        // Hunt for the "Real" content in metadata
+        const ogDescription = $social('meta[property="og:description"]').attr('content') || 
+                            $social('meta[name="description"]').attr('content');
+        const ogTitle = $social('meta[property="og:title"]').attr('content') || 
+                        $social('title').text();
         
-        // If we successfully found the social caption, use it!
-        if (ogDescription && ogDescription.length > 10 && !ogDescription.includes("Login")) {
-          cleanText = `Post Title: ${ogTitle || ""}\nCaption/Description: ${ogDescription}`;
-          pageTitle = ogTitle || url;
-          console.log("Successfully extracted Social Metadata via Facebook Crawler bypass.");
+        // Validation: If it says "Login", it's the wrong page
+        if (ogDescription && ogDescription.length > 20 && !ogDescription.includes("Login • Instagram")) {
+          cleanText = `Source: ${ogTitle}\nContent: ${ogDescription}`;
+          pageTitle = ogTitle;
+          console.log("Successfully extracted Social Metadata via Bot Identity.");
         } else {
-          throw new Error("Social crawler blocked, trying Jina Reader");
+          throw new Error("Metadata check failed or Login Wall detected.");
         }
       } catch (socialError) {
-        console.warn("Social crawler failed or returned empty. Trying Jina Reader...", socialError);
+        console.warn("Social crawler failed. Trying Jina Reader with aggressive headers...", socialError);
         
         try {
-          // 🚀 Secondary: High-Performance Reader Agent Integration
           const readerResponse = await fetch(`https://r.jina.ai/${url}`, {
-            headers: { 'Accept': 'application/json' }
+            headers: { 
+              'Accept': 'application/json',
+              'X-No-Cache': 'true'
+            }
           });
           
           if (readerResponse.ok) {
             const readerData = await readerResponse.json();
             cleanText = readerData.data?.content || "";
             pageTitle = readerData.data?.title || url;
-            console.log("Successfully extracted data via Jina Reader.");
+            
+            // Final check to see if we got the login page
+            if (cleanText.includes("Welcome back to Instagram") || cleanText.includes("Log in to Instagram")) {
+              throw new Error("Jina also hit the login wall.");
+            }
           } else {
             throw new Error("Reader failed");
           }
         } catch (error) {
-          console.warn("All advanced scrapers failed. Using basic local fallback.", error);
-          
-          // 🛡️ Final Fallback: Standard Cheerio
-          const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-          const html = await response.text();
-          const $ = cheerio.load(html);
-          $('script, style, nav, footer, header').remove();
-          cleanText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 5000);
-          pageTitle = $('title').text() || url;
+          console.warn("All link-based scrapers failed.", error);
+          cleanText = "The AI was blocked by Instagram's login wall. PRO TIP: If this is a private or protected post, take a screenshot and upload the image file directly! I can now read text from images using Vision AI.";
+          pageTitle = "Blocked by Instagram Login Wall";
         }
       }
     }
