@@ -47,6 +47,9 @@ export default function CollabDashboard() {
   ]);
   const [activeVaultSessionId, setActiveVaultSessionId] = useState<number | null>(1);
 
+  const [isNewPathModalOpen, setIsNewPathModalOpen] = useState(false);
+  const [newPathTitle, setNewPathTitle] = useState("");
+
   // Mock Presence Data
   const onlineUsers = [
     { id: 1, name: "Ruthvik", role: "Admin", status: "online", avatar: "R", mood: myMood },
@@ -105,6 +108,21 @@ export default function CollabDashboard() {
       }
       return session;
     }));
+  };
+
+  const handleCreateVaultSession = () => {
+    if (!newPathTitle) return;
+    const newSession = {
+      id: Date.now(),
+      title: newPathTitle,
+      progress: 0,
+      topics: [],
+      resources: []
+    };
+    setVaultSessions([newSession, ...vaultSessions]);
+    setActiveVaultSessionId(newSession.id);
+    setIsNewPathModalOpen(false);
+    setNewPathTitle("");
   };
 
   if (!isAuthenticated) {
@@ -471,7 +489,7 @@ export default function CollabDashboard() {
               <div className="w-1/3 bg-surface rounded-xl border border-border flex flex-col overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-border flex justify-between items-center bg-surface-2/50 shrink-0">
                   <h3 className="font-syne font-bold text-[14px] flex items-center gap-2"><Library size={14} className="text-accent" /> Learning Paths</h3>
-                  <button className="text-accent text-[12px] font-semibold hover:underline bg-accent/10 px-2 py-1 rounded">+ New Path</button>
+                  <button onClick={() => setIsNewPathModalOpen(true)} className="text-accent text-[12px] font-semibold hover:underline bg-accent/10 px-2 py-1 rounded">+ New Path</button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                   {vaultSessions.map(session => (
@@ -683,6 +701,44 @@ export default function CollabDashboard() {
                 className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
               >
                 Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Path Modal */}
+      {isNewPathModalOpen && (
+        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
+              <h3 className="font-syne text-lg font-bold text-text-primary">Create Learning Path</h3>
+              <button onClick={() => setIsNewPathModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Path Title</label>
+                <input 
+                  type="text" 
+                  value={newPathTitle}
+                  onChange={(e) => setNewPathTitle(e.target.value)}
+                  placeholder="e.g. Advanced AI Agents" 
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
+              <button onClick={() => setIsNewPathModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
+              <button 
+                onClick={handleCreateVaultSession}
+                disabled={!newPathTitle}
+                className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                Create Path
               </button>
             </div>
           </div>
