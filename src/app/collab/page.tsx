@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus } from "lucide-react";
+import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function CollabDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [duoCodeInput, setDuoCodeInput] = useState("");
+  const [usernameInput, setUsernameInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [activeUser, setActiveUser] = useState<{id: number, name: string, role: string, avatar: string} | null>(null);
   
   const [activeTab, setActiveTab] = useState("Overview");
   const [myMood, setMyMood] = useState("Focus Mode 🎯");
@@ -133,6 +136,20 @@ export default function CollabDashboard() {
     setNewPathTitle("");
   };
 
+  const handleLogin = () => {
+    if (usernameInput === "ruthvik" && passwordInput === "123456") {
+      setActiveUser({ id: 1, name: "Ruthvik", role: "Admin", avatar: "R" });
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else if (usernameInput === "keer" && passwordInput === "123456") {
+      setActiveUser({ id: 2, name: "Keer (K)", role: "Co-Pilot", avatar: "K" });
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else {
+      setLoginError("Invalid username or password");
+    }
+  };
+
   const handleAddTopics = () => {
     if (!newTopicTitles.trim() || activeVaultSessionId === null) return;
     const titles = newTopicTitles.split('\n').map(t => t.trim()).filter(t => t);
@@ -174,6 +191,36 @@ export default function CollabDashboard() {
     setNewResourceUrl("");
   };
 
+  const handleDeleteTask = (id: number) => {
+    setTasks(tasks.filter(t => t.id !== id));
+  };
+
+  const handleDeleteVaultSession = (id: number) => {
+    setVaultSessions(vaultSessions.filter(s => s.id !== id));
+    if (activeVaultSessionId === id) setActiveVaultSessionId(null);
+  };
+
+  const handleDeleteTopic = (sessionId: number, topicId: number) => {
+    setVaultSessions(vaultSessions.map(session => {
+      if (session.id === sessionId) {
+        const newTopics = session.topics.filter(t => t.id !== topicId);
+        const completedCount = newTopics.filter(t => t.completed).length;
+        const progress = newTopics.length ? Math.round((completedCount / newTopics.length) * 100) : 0;
+        return { ...session, topics: newTopics, progress };
+      }
+      return session;
+    }));
+  };
+
+  const handleDeleteResource = (sessionId: number, resourceId: number) => {
+    setVaultSessions(vaultSessions.map(session => {
+      if (session.id === sessionId) {
+        return { ...session, resources: session.resources.filter(r => r.id !== resourceId) };
+      }
+      return session;
+    }));
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-text-primary font-sans relative overflow-hidden">
@@ -185,17 +232,17 @@ export default function CollabDashboard() {
             <Globe size={32} />
           </div>
           <h1 className="font-syne text-2xl font-bold mb-2">Join CollabSpace</h1>
-          <p className="text-[13px] text-text-3 mb-8">Enter your Duo-Code or login to sync with your partner's dashboard in real-time.</p>
+          <p className="text-[13px] text-text-3 mb-8">Login to sync with your partner's dashboard in real-time.</p>
           
           <div className="space-y-4 mb-8">
             <div className="text-left">
-              <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-1 block">Duo-Code Key</label>
+              <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-1 block">Username</label>
               <input 
                 type="text" 
-                placeholder="e.g. RUTH-K-940X" 
+                placeholder="e.g. ruthvik" 
                 className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-[14px] outline-none focus:border-accent font-mono transition-colors" 
-                value={duoCodeInput} 
-                onChange={e => setDuoCodeInput(e.target.value)} 
+                value={usernameInput} 
+                onChange={e => setUsernameInput(e.target.value)} 
               />
             </div>
             <div className="text-left">
@@ -204,12 +251,15 @@ export default function CollabDashboard() {
                 type="password" 
                 placeholder="••••••••" 
                 className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-[14px] outline-none focus:border-accent transition-colors" 
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
               />
             </div>
+            {loginError && <div className="text-[12px] text-coral text-center font-bold">{loginError}</div>}
           </div>
           
           <button 
-            onClick={() => setIsAuthenticated(true)} 
+            onClick={handleLogin} 
             className="w-full bg-accent text-white font-bold py-3.5 rounded-lg shadow-md hover:bg-accent-2 transition-all hover:-translate-y-0.5"
           >
             Connect to Workspace
@@ -247,7 +297,10 @@ export default function CollabDashboard() {
       <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
         {tasks.map(task => (
           <div key={task.id} className={"p-3 rounded-lg border transition-all " + (task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50')}>
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-3 group/task">
+              <button onClick={() => handleDeleteTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 opacity-0 group-hover/task:opacity-100 hover:text-coral transition-all">
+                <Trash2 size={16} />
+              </button>
               <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
                 {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
               </button>
@@ -544,10 +597,13 @@ export default function CollabDashboard() {
                   {vaultSessions.map(session => (
                      <div 
                        key={session.id} 
-                       onClick={() => setActiveVaultSessionId(session.id)}
-                       className={`p-4 rounded-xl border cursor-pointer transition-all ${activeVaultSessionId === session.id ? 'bg-accent/5 border-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]' : 'bg-surface-2 border-border hover:border-accent/50'}`}
+                       className={`p-4 rounded-xl border transition-all relative group/session ${activeVaultSessionId === session.id ? 'bg-accent/5 border-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]' : 'bg-surface-2 border-border hover:border-accent/50'}`}
                      >
-                       <h4 className="font-semibold text-[13px] mb-3 leading-tight">{session.title}</h4>
+                       <button onClick={(e) => { e.stopPropagation(); handleDeleteVaultSession(session.id); }} className="absolute top-3 right-3 text-text-3 opacity-0 group-hover/session:opacity-100 hover:text-coral transition-all z-10">
+                         <Trash2 size={14} />
+                       </button>
+                       <div onClick={() => setActiveVaultSessionId(session.id)} className="cursor-pointer">
+                         <h4 className="font-semibold text-[13px] mb-3 pr-6 leading-tight">{session.title}</h4>
                        <div className="flex justify-between text-[10px] font-semibold text-text-3 mb-1.5">
                          <span>Progress</span>
                          <span className="text-accent">{session.progress}%</span>
@@ -588,7 +644,10 @@ export default function CollabDashboard() {
                                  <button onClick={() => handleToggleTopic(session.id, topic.id)} className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${topic.completed ? 'bg-green border-green text-white shadow-sm' : 'border-text-3 bg-surface group-hover:border-accent'}`}>
                                    {topic.completed && <CheckCircle size={10} />}
                                  </button>
-                                 <span className={`text-[13px] ${topic.completed ? 'line-through text-text-3' : 'text-text-primary font-medium'}`}>{topic.title}</span>
+                                 <span className={`text-[13px] flex-1 ${topic.completed ? 'line-through text-text-3' : 'text-text-primary font-medium'}`}>{topic.title}</span>
+                                 <button onClick={() => handleDeleteTopic(session.id, topic.id)} className="text-text-3 opacity-0 group-hover:opacity-100 hover:text-coral transition-all">
+                                   <Trash2 size={14} />
+                                 </button>
                                </div>
                              ))}
                            </div>
@@ -602,15 +661,20 @@ export default function CollabDashboard() {
                            </div>
                            <div className="grid grid-cols-2 gap-3">
                              {session.resources.map(res => (
-                               <a href={res.url} key={res.id} target="_blank" className="flex items-center gap-3 p-3 border border-border rounded-xl bg-surface-2 hover:border-blue/50 hover:shadow-sm transition-all group">
-                                 <div className="w-10 h-10 rounded-lg bg-blue/10 text-blue flex items-center justify-center shrink-0 group-hover:bg-blue group-hover:text-white transition-colors">
-                                   {res.type === 'link' ? <LinkIcon size={16}/> : <FileText size={16}/>}
-                                 </div>
-                                 <div className="min-w-0">
-                                   <p className="text-[13px] font-bold truncate text-text-primary group-hover:text-blue transition-colors">{res.title}</p>
-                                   <p className="text-[10px] text-text-3 font-semibold uppercase tracking-wide mt-0.5">{res.type}</p>
-                                 </div>
-                               </a>
+                               <div key={res.id} className="relative group/resource">
+                                 <a href={res.url} target="_blank" className="flex items-center gap-3 p-3 border border-border rounded-xl bg-surface-2 hover:border-blue/50 hover:shadow-sm transition-all h-full">
+                                   <div className="w-10 h-10 rounded-lg bg-blue/10 text-blue flex items-center justify-center shrink-0 group-hover/resource:bg-blue group-hover/resource:text-white transition-colors">
+                                     {res.type === 'link' ? <LinkIcon size={16}/> : <FileText size={16}/>}
+                                   </div>
+                                   <div className="min-w-0 pr-6">
+                                     <p className="text-[13px] font-bold truncate text-text-primary group-hover/resource:text-blue transition-colors">{res.title}</p>
+                                     <p className="text-[10px] text-text-3 font-semibold uppercase tracking-wide mt-0.5">{res.type}</p>
+                                   </div>
+                                 </a>
+                                 <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteResource(session.id, res.id); }} className="absolute top-1/2 -translate-y-1/2 right-3 text-text-3 opacity-0 group-hover/resource:opacity-100 hover:text-coral transition-all z-10 p-1 bg-surface-2 rounded-md border border-border/50">
+                                   <Trash2 size={12} />
+                                 </button>
+                               </div>
                              ))}
                            </div>
                         </div>
