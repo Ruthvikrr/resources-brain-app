@@ -168,6 +168,20 @@ export async function POST(req: Request) {
       cleanText = "No readable text could be extracted from this resource (it might be an image or protected file).";
     }
 
+    // Step 1.5: Fetch existing categories to encourage reuse
+    let existingCategoriesStr = "GitHub, Documentation, Social Media, YouTube";
+    try {
+      const { data: catData } = await supabase.from('resources').select('category');
+      if (catData && catData.length > 0) {
+        const uniqueCats = Array.from(new Set(catData.map(r => r.category))).filter(Boolean);
+        if (uniqueCats.length > 0) {
+          existingCategoriesStr = uniqueCats.join(", ");
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch existing categories");
+    }
+
 // You will need this changed at the top:
 // import { generateText } from 'ai';
 
@@ -181,10 +195,12 @@ export async function POST(req: Request) {
       URL: ${url}
       CONTENT SNIPPET: ${cleanText}
 
+      EXISTING CATEGORIES: [${existingCategoriesStr}]
+
       You must return ONLY a JSON object and absolutely nothing else. Even if there is no content snippet or the content is unreadable, you MUST return a valid JSON object. Use this exact schema:
       {
         "summary": "Do NOT write just 2-3 sentences. Write a comprehensive, highly detailed analysis. Extract key points, important skills, primary takeaways, and thoroughly summarize the exact exact details found inside the document. Be as informative as possible.",
-        "category": "Generate a dynamic, highly accurate 1-2 word category (e.g. 'Software Resume', 'UI Design Toolkit', etc.). Do not use a hardcoded generic list.",
+        "category": "CRITICAL: First, try to EXACTLY match one of the EXISTING CATEGORIES provided above. If the link is from github.com, use the 'GitHub' category if it exists. ONLY create a new 1-2 word category if absolutely none of the existing ones fit.",
         "tags": ["Tag1", "Tag2", "Tag3", "Tag4"] 
       }
       `,

@@ -179,8 +179,8 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="px-3 mb-2">
-          <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-2">
+        <div className="px-3 mb-2 flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+          <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-2 sticky top-0 bg-surface z-10 py-1">
             Dynamic Categories
           </div>
           
@@ -206,19 +206,7 @@ export default function Home() {
           </nav>
         </div>
 
-        <div className="px-3 mb-2 mt-6">
-          <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-2">
-            Dashboards
-          </div>
-          <nav className="space-y-1">
-            <Link href="/collab" className="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-text-3 hover:bg-surface-2 hover:text-accent transition-all group border border-transparent hover:border-border">
-              <span className="w-5 h-5 rounded bg-accent-dim text-accent flex items-center justify-center">🌐</span>
-              CollabSpace (New)
-            </Link>
-          </nav>
-        </div>
-
-        <div className="mt-auto px-5 pt-4 border-t border-border">
+        <div className="mt-auto px-5 pt-4 border-t border-border shrink-0">
           <p className="text-[11px] text-text-3 leading-relaxed">
             AI dynamic category indexing active. Awaiting new links &amp; documents.
           </p>
@@ -228,8 +216,19 @@ export default function Home() {
       {/* Main Content */}
       <main className="ml-0 md:ml-[220px] flex-1 flex flex-col min-h-screen">
         {/* Topbar */}
-        <div className="sticky top-0 z-10 px-4 md:px-8 py-3 md:py-5 border-b border-border flex items-center gap-2 md:gap-4 bg-[#0a0a0f]/85 backdrop-blur-md">
-          <form className="flex-1 max-w-full md:max-w-[550px] relative flex items-center gap-2" onSubmit={handleChatSubmit}>
+        <div className="sticky top-0 z-10 px-4 md:px-8 py-3 md:py-5 border-b border-border flex items-center gap-2 md:gap-4 bg-surface/85 backdrop-blur-md">
+          
+          {/* Dashboard Switcher */}
+          <div className="hidden sm:flex items-center bg-surface-2 p-1 rounded-lg border border-border shrink-0">
+            <div className="px-4 py-1.5 bg-accent text-white rounded-md text-[13px] font-semibold shadow-sm cursor-default">
+              Resource Brain
+            </div>
+            <Link href="/collab" className="px-4 py-1.5 text-text-3 hover:text-text-primary rounded-md text-[13px] font-medium transition-colors">
+              CollabSpace
+            </Link>
+          </div>
+
+          <form className="flex-1 max-w-full md:max-w-[550px] relative flex items-center gap-2 ml-auto" onSubmit={handleChatSubmit}>
             <div className="w-full relative flex items-center bg-surface-2 border border-border rounded-lg outline-none focus-within:border-accent transition-all overflow-hidden p-1.5 focus-within:ring-2 ring-accent/20">
               <Search className="absolute left-3.5 text-text-3 pointer-events-none" size={14} />
               
@@ -249,7 +248,7 @@ export default function Home() {
                 type="text" 
                 value={chatInput}
                 onChange={handleChatInput}
-                placeholder={focusedResource ? "Ask a targeted question about this..." : "Ask the AI anything about your entire brain..."} 
+                placeholder={focusedResource ? "Ask a targeted question about this..." : "Ask the AI anything..."} 
                 className={`w-full bg-transparent text-text-primary text-[13px] py-1 pl-[12px] pr-2 outline-none ${focusedResource ? 'ml-0' : 'pl-8'}`}
               />
             </div>

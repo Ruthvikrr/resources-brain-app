@@ -34,10 +34,6 @@ export default function CollabDashboard() {
             Dashboards
           </div>
           <nav className="space-y-1">
-            <Link href="/" className="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-text-3 hover:bg-surface-2 transition-all group">
-              <ArrowLeft size={16} className="text-text-3 group-hover:text-accent transition-colors" />
-              Back to Resource Brain
-            </Link>
             <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Overview' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Overview')}>
               <div className="flex items-center gap-3">
                 <LayoutGrid size={16} className={activeTab === 'Overview' ? 'text-accent-2' : ''} />
@@ -94,11 +90,22 @@ export default function CollabDashboard() {
         {/* Topbar */}
         <div className="sticky top-0 z-10 px-8 py-5 border-b border-border flex items-center justify-between bg-surface/90 backdrop-blur-md">
           <div className="flex items-center gap-4">
-            <h1 className="font-syne text-xl font-bold text-text-primary">
+            <h1 className="font-syne text-xl font-bold text-text-primary hidden md:block">
               {activeTab}
             </h1>
+            
+            {/* Dashboard Switcher */}
+            <div className="flex items-center bg-surface-2 p-1 rounded-lg border border-border shrink-0">
+              <Link href="/" className="px-4 py-1.5 text-text-3 hover:text-text-primary rounded-md text-[13px] font-medium transition-colors">
+                Resource Brain
+              </Link>
+              <div className="px-4 py-1.5 bg-accent text-white rounded-md text-[13px] font-semibold shadow-sm cursor-default">
+                CollabSpace
+              </div>
+            </div>
+
             <span className="px-2 py-1 bg-green-dim text-green text-[11px] font-semibold rounded-md flex items-center gap-1">
-              <Activity size={10} /> Live Socket.io Sync Active
+              <Activity size={10} /> Live Socket.io Sync
             </span>
           </div>
 
