@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap } from "lucide-react";
+import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X } from "lucide-react";
 import Link from "next/link";
 
 export default function CollabDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [duoCodeInput, setDuoCodeInput] = useState("");
+  
   const [activeTab, setActiveTab] = useState("Overview");
   const [myMood, setMyMood] = useState("Focus Mode 🎯");
   
@@ -18,6 +21,12 @@ export default function CollabDashboard() {
   const [courseUrl, setCourseUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [courseQuestions, setCourseQuestions] = useState<{q: string, a: string}[]>([]);
+
+  // Modal State
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("Both");
+  const [newTaskGift, setNewTaskGift] = useState("");
 
   // Mock Presence Data
   const onlineUsers = [
@@ -49,8 +58,134 @@ export default function CollabDashboard() {
     }, 1500);
   };
 
+  const handleCreateTask = () => {
+    if (!newTaskTitle) return;
+    setTasks([
+      {
+        id: Date.now(),
+        title: newTaskTitle,
+        creator: "R",
+        assignee: newTaskAssignee,
+        completed: false,
+        gift: newTaskGift ? { text: newTaskGift, revealed: false } : null
+      },
+      ...tasks
+    ]);
+    setIsNewTaskModalOpen(false);
+    setNewTaskTitle("");
+    setNewTaskGift("");
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-bg flex flex-col items-center justify-center p-6 text-text-primary font-sans relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-coral/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="bg-surface border border-border p-10 rounded-2xl shadow-xl w-full max-w-md text-center relative z-10 backdrop-blur-md">
+          <div className="w-16 h-16 bg-accent text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-accent/20">
+            <Globe size={32} />
+          </div>
+          <h1 className="font-syne text-2xl font-bold mb-2">Join CollabSpace</h1>
+          <p className="text-[13px] text-text-3 mb-8">Enter your Duo-Code or login to sync with your partner's dashboard in real-time.</p>
+          
+          <div className="space-y-4 mb-8">
+            <div className="text-left">
+              <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-1 block">Duo-Code Key</label>
+              <input 
+                type="text" 
+                placeholder="e.g. RUTH-K-940X" 
+                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-[14px] outline-none focus:border-accent font-mono transition-colors" 
+                value={duoCodeInput} 
+                onChange={e => setDuoCodeInput(e.target.value)} 
+              />
+            </div>
+            <div className="text-left">
+              <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-1 block">Password</label>
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                className="w-full bg-surface-2 border border-border rounded-lg px-4 py-3 text-[14px] outline-none focus:border-accent transition-colors" 
+              />
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => setIsAuthenticated(true)} 
+            className="w-full bg-accent text-white font-bold py-3.5 rounded-lg shadow-md hover:bg-accent-2 transition-all hover:-translate-y-0.5"
+          >
+            Connect to Workspace
+          </button>
+          
+          <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-text-3">
+            <Shield size={12} className="text-green" /> E2E Encrypted Connection
+          </div>
+          
+          <Link href="/" className="inline-block mt-6 text-[12px] font-medium text-text-3 hover:text-accent transition-colors border-t border-border w-full pt-6">
+            ← Return to Resource Brain
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const renderAccountabilityBoard = () => (
+    <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col h-full">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="font-syne text-[16px] font-bold text-text-primary flex items-center gap-2">
+          <Briefcase size={16} className="text-accent" />
+          Accountability Board
+        </h3>
+        <button onClick={() => setIsNewTaskModalOpen(true)} className="text-accent text-[11px] font-semibold hover:underline bg-accent/10 px-3 py-1.5 rounded-md hover:bg-accent/20 transition-colors">
+          + New Task
+        </button>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <button className="px-3 py-1 bg-accent text-white text-[11px] font-semibold rounded-full shadow-sm">All Tasks</button>
+        <button className="px-3 py-1 bg-surface-2 border border-border text-text-3 hover:text-text-primary text-[11px] font-semibold rounded-full transition-colors">Shared (Both)</button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
+        {tasks.map(task => (
+          <div key={task.id} className={"p-3 rounded-lg border transition-all " + (task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50')}>
+            <div className="flex items-start gap-3">
+              <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
+                {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={"text-[13px] font-medium truncate " + (task.completed ? 'line-through text-text-3' : 'text-text-primary')}>
+                  {task.title}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  {/* Ownership Tags */}
+                  <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 " + (task.assignee === 'Both' ? 'bg-coral-dim text-coral' : task.assignee === 'R' ? 'bg-accent-dim text-accent' : 'bg-blue-dim text-blue')}>
+                    {task.assignee === 'Both' ? 'Dual Task' : "[ " + task.assignee + " ]"}
+                  </span>
+                  
+                  {/* Gift Reveal System */}
+                  {task.gift && (
+                    <div className={"flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded " + (task.gift.revealed ? 'bg-green-dim text-green' : 'bg-surface border border-dashed border-text-3 text-text-3')}>
+                      {task.gift.revealed ? <Unlock size={10} /> : <Lock size={10} />}
+                      {task.gift.revealed ? task.gift.text : 'Mystery Gift'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {tasks.length === 0 && (
+          <div className="py-10 text-center text-text-3 text-[13px]">
+            No shared tasks yet. Create one!
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="flex min-h-screen bg-bg text-text-primary font-sans">
+    <div className="flex min-h-screen bg-bg text-text-primary font-sans relative">
       {/* Dynamic Collapsible Sidebar */}
       <aside className="hidden md:flex w-[240px] fixed top-0 left-0 bottom-0 bg-surface border-r border-border flex-col py-6 z-10 transition-all duration-300">
         <div className="px-5 pb-6 border-b border-border mb-5">
@@ -118,7 +253,7 @@ export default function CollabDashboard() {
         <div className="mt-auto px-5 pt-4 border-t border-border flex flex-col gap-3 shrink-0">
           <div className="bg-surface-2 border border-border p-3 rounded-lg flex flex-col gap-1">
             <span className="text-[10px] text-text-3 font-semibold uppercase tracking-wider">Duo-Code Key</span>
-            <span className="text-[12px] font-mono text-accent">RUTH-K-940X</span>
+            <span className="text-[12px] font-mono text-accent">{duoCodeInput || "RUTH-K-940X"}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[11px] text-text-3">
@@ -220,50 +355,8 @@ export default function CollabDashboard() {
               </div>
 
               {/* CENTER: Accountability Board (Task Engine) */}
-              <div className="col-span-1 md:col-span-1 lg:col-span-1 bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-syne text-[16px] font-bold text-text-primary flex items-center gap-2">
-                    <Briefcase size={16} className="text-accent" />
-                    Accountability Board
-                  </h3>
-                  <button className="text-accent text-[11px] font-semibold hover:underline">+ New Task</button>
-                </div>
-
-                <div className="flex gap-2 mb-4">
-                  <button className="px-3 py-1 bg-accent text-white text-[11px] font-semibold rounded-full shadow-sm">All Tasks</button>
-                  <button className="px-3 py-1 bg-surface-2 border border-border text-text-3 hover:text-text-primary text-[11px] font-semibold rounded-full transition-colors">Shared (Both)</button>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
-                  {tasks.map(task => (
-                    <div key={task.id} className={"p-3 rounded-lg border transition-all " + (task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50')}>
-                      <div className="flex items-start gap-3">
-                        <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
-                          {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <p className={"text-[13px] font-medium truncate " + (task.completed ? 'line-through text-text-3' : 'text-text-primary')}>
-                            {task.title}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            {/* Ownership Tags */}
-                            <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 " + (task.assignee === 'Both' ? 'bg-coral-dim text-coral' : task.assignee === 'R' ? 'bg-accent-dim text-accent' : 'bg-blue-dim text-blue')}>
-                              {task.assignee === 'Both' ? 'Dual Task' : "[ " + task.assignee + " ]"}
-                            </span>
-                            
-                            {/* Gift Reveal System */}
-                            {task.gift && (
-                              <div className={"flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded " + (task.gift.revealed ? 'bg-green-dim text-green' : 'bg-surface border border-dashed border-text-3 text-text-3')}>
-                                {task.gift.revealed ? <Unlock size={10} /> : <Lock size={10} />}
-                                {task.gift.revealed ? task.gift.text : 'Mystery Gift'}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="col-span-1 md:col-span-1 lg:col-span-1">
+                {renderAccountabilityBoard()}
               </div>
 
               {/* RIGHT: AI Course Analyzer */}
@@ -329,6 +422,12 @@ export default function CollabDashboard() {
             </div>
           )}
 
+          {activeTab === 'Tasks' && (
+            <div className="h-[600px] max-w-4xl mx-auto">
+              {renderAccountabilityBoard()}
+            </div>
+          )}
+
           {activeTab === 'Messages' && (
             <div className="bg-surface rounded-xl border border-border h-[600px] flex shadow-sm overflow-hidden">
               <div className="w-1/3 border-r border-border flex flex-col">
@@ -388,6 +487,80 @@ export default function CollabDashboard() {
           )}
         </div>
       </main>
+
+      {/* New Task Modal */}
+      {isNewTaskModalOpen && (
+        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
+              <h3 className="font-syne text-lg font-bold text-text-primary">Create Shared Task</h3>
+              <button onClick={() => setIsNewTaskModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Task Title</label>
+                <input 
+                  type="text" 
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="What needs to be done?" 
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Assign To</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => setNewTaskAssignee("R")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'R' ? 'bg-accent/10 border-accent text-accent' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    Me (R)
+                  </button>
+                  <button 
+                    onClick={() => setNewTaskAssignee("K")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'K' ? 'bg-blue/10 border-blue text-blue' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    Partner (K)
+                  </button>
+                  <button 
+                    onClick={() => setNewTaskAssignee("Both")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'Both' ? 'bg-coral/10 border-coral text-coral' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    Both (Dual)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block flex items-center gap-1"><Gift size={12}/> Attach Mystery Gift (Optional)</label>
+                <input 
+                  type="text" 
+                  value={newTaskGift}
+                  onChange={(e) => setNewTaskGift(e.target.value)}
+                  placeholder="e.g. I'll buy you coffee tomorrow!" 
+                  className="w-full bg-surface border border-dashed border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+                <p className="text-[10px] text-text-3 mt-1.5">The gift will remain locked until the task is checked off.</p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
+              <button onClick={() => setIsNewTaskModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
+              <button 
+                onClick={handleCreateTask}
+                disabled={!newTaskTitle}
+                className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
