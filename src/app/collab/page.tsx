@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2 } from "lucide-react";
+import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2, HeartHandshake } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
@@ -47,7 +47,7 @@ export default function CollabDashboard() {
   // Mock Presence Data
   const onlineUsers = [
     { id: 1, name: "Ruthvik", role: "Admin", status: "online", avatar: "R", mood: myMood },
-    { id: 2, name: "Partner (K)", role: "Co-Pilot", status: "online", avatar: "K", mood: "Researching 📚" },
+    { id: 2, name: "Babe (Keer) ❤️", role: "Co-Pilot", status: "online", avatar: "K", mood: "Researching 📚" },
   ];
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function CollabDashboard() {
       setIsAuthenticated(true);
       setLoginError("");
     } else if (usernameInput === "keer" && passwordInput === "123456") {
-      setActiveUser({ id: 2, name: "Keer (K)", role: "Co-Pilot", avatar: "K" });
+      setActiveUser({ id: 2, name: "Babe (Keer) ❤️", role: "Co-Pilot", avatar: "K" });
       setIsAuthenticated(true);
       setLoginError("");
     } else {
@@ -202,8 +202,8 @@ export default function CollabDashboard() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-coral/5 rounded-full blur-3xl pointer-events-none"></div>
         
         <div className="bg-surface border border-border p-10 rounded-2xl shadow-xl w-full max-w-md text-center relative z-10 backdrop-blur-md">
-          <div className="w-16 h-16 bg-accent text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-accent/20">
-            <Globe size={32} />
+          <div className="w-16 h-16 bg-gradient-to-br from-coral to-accent text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-coral/20">
+            <HeartHandshake size={32} />
           </div>
           <h1 className="font-syne text-2xl font-bold mb-2">Join CollabSpace</h1>
           <p className="text-[13px] text-text-3 mb-8">Login to sync with your partner's dashboard in real-time.</p>
@@ -316,8 +316,8 @@ export default function CollabDashboard() {
         <div className="px-5 pb-6 border-b border-border mb-5">
           <div className="font-syne text-[18px] font-bold flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center text-sm text-white shadow-lg">
-                <Globe size={14} />
+              <span className="w-7 h-7 bg-gradient-to-br from-coral to-accent rounded-lg flex items-center justify-center text-sm text-white shadow-lg">
+                <HeartHandshake size={14} />
               </span>
               CollabSpace
             </div>
@@ -670,7 +670,7 @@ export default function CollabDashboard() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-4 border-b border-border bg-surface-2 cursor-pointer">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-semibold text-[13px] text-text-primary">Partner (K)</span>
+                      <span className="font-semibold text-[13px] text-text-primary">Babe (Keer) ❤️</span>
                       <span className="text-[10px] text-accent font-medium">Just now</span>
                     </div>
                     <p className="text-[12px] text-text-2 truncate">I answered the quiz on Server Components!</p>
@@ -680,9 +680,9 @@ export default function CollabDashboard() {
               <div className="flex-1 flex flex-col bg-bg">
                 <div className="p-4 border-b border-border bg-surface flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-accent-dim text-accent font-bold rounded-full flex items-center justify-center">K</div>
+                    <div className="w-8 h-8 bg-coral/10 text-coral font-bold rounded-full flex items-center justify-center">K</div>
                     <div>
-                      <div className="text-[13px] font-semibold text-text-primary">Partner (K)</div>
+                      <div className="text-[13px] font-semibold text-text-primary">Babe (Keer) ❤️</div>
                       <div className="text-[11px] text-green flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green rounded-full"></span> Researching 📚</div>
                     </div>
                   </div>
