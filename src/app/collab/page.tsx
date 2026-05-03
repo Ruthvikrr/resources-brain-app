@@ -50,6 +50,14 @@ export default function CollabDashboard() {
   const [isNewPathModalOpen, setIsNewPathModalOpen] = useState(false);
   const [newPathTitle, setNewPathTitle] = useState("");
 
+  const [isAddTopicModalOpen, setIsAddTopicModalOpen] = useState(false);
+  const [newTopicTitles, setNewTopicTitles] = useState("");
+
+  const [isAddResourceModalOpen, setIsAddResourceModalOpen] = useState(false);
+  const [newResourceTitle, setNewResourceTitle] = useState("");
+  const [newResourceType, setNewResourceType] = useState("link");
+  const [newResourceUrl, setNewResourceUrl] = useState("");
+
   // Mock Presence Data
   const onlineUsers = [
     { id: 1, name: "Ruthvik", role: "Admin", status: "online", avatar: "R", mood: myMood },
@@ -123,6 +131,47 @@ export default function CollabDashboard() {
     setActiveVaultSessionId(newSession.id);
     setIsNewPathModalOpen(false);
     setNewPathTitle("");
+  };
+
+  const handleAddTopics = () => {
+    if (!newTopicTitles.trim() || activeVaultSessionId === null) return;
+    const titles = newTopicTitles.split('\n').map(t => t.trim()).filter(t => t);
+    if (titles.length === 0) return;
+
+    setVaultSessions(vaultSessions.map(session => {
+      if (session.id === activeVaultSessionId) {
+        const newTopicsList = [...session.topics];
+        titles.forEach(t => {
+          newTopicsList.push({ id: Date.now() + Math.random(), title: t, completed: false });
+        });
+        const progress = Math.round((newTopicsList.filter(t => t.completed).length / newTopicsList.length) * 100) || 0;
+        return { ...session, topics: newTopicsList, progress };
+      }
+      return session;
+    }));
+    setIsAddTopicModalOpen(false);
+    setNewTopicTitles("");
+  };
+
+  const handleAddResource = () => {
+    if (!newResourceTitle.trim() || activeVaultSessionId === null) return;
+    setVaultSessions(vaultSessions.map(session => {
+      if (session.id === activeVaultSessionId) {
+        return {
+          ...session,
+          resources: [...session.resources, {
+            id: Date.now(),
+            title: newResourceTitle,
+            type: newResourceType,
+            url: newResourceUrl || "#"
+          }]
+        };
+      }
+      return session;
+    }));
+    setIsAddResourceModalOpen(false);
+    setNewResourceTitle("");
+    setNewResourceUrl("");
   };
 
   if (!isAuthenticated) {
@@ -531,7 +580,7 @@ export default function CollabDashboard() {
                         <div>
                            <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
                              <h3 className="font-bold text-[14px] flex items-center gap-2 text-text-primary"><Target size={16} className="text-accent"/> Syllabus & Progress Tracker</h3>
-                             <button className="text-[11px] font-semibold text-text-3 hover:text-accent flex items-center gap-1"><Plus size={12}/> Add Topic</button>
+                             <button onClick={() => setIsAddTopicModalOpen(true)} className="text-[11px] font-semibold text-text-3 hover:text-accent flex items-center gap-1"><Plus size={12}/> Add Topic</button>
                            </div>
                            <div className="space-y-2">
                              {session.topics.map(topic => (
@@ -549,7 +598,7 @@ export default function CollabDashboard() {
                         <div>
                            <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
                              <h3 className="font-bold text-[14px] flex items-center gap-2 text-text-primary"><Globe size={16} className="text-blue"/> Vault Storage</h3>
-                             <button className="text-[11px] font-semibold text-text-3 hover:text-blue flex items-center gap-1"><Plus size={12}/> Upload Resource</button>
+                             <button onClick={() => setIsAddResourceModalOpen(true)} className="text-[11px] font-semibold text-text-3 hover:text-blue flex items-center gap-1"><Plus size={12}/> Upload Resource</button>
                            </div>
                            <div className="grid grid-cols-2 gap-3">
                              {session.resources.map(res => (
@@ -739,6 +788,111 @@ export default function CollabDashboard() {
                 className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
               >
                 Create Path
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Topic Modal */}
+      {isAddTopicModalOpen && (
+        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
+              <h3 className="font-syne text-lg font-bold text-text-primary">Add Syllabus Topics</h3>
+              <button onClick={() => setIsAddTopicModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Topics (One per line)</label>
+                <textarea 
+                  value={newTopicTitles}
+                  onChange={(e) => setNewTopicTitles(e.target.value)}
+                  placeholder="E.g.&#10;Introduction to Vectors&#10;Matrix Multiplication&#10;Eigenvalues" 
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors min-h-[120px] resize-y custom-scrollbar"
+                />
+                <p className="text-[10px] text-text-3 mt-1.5">You can paste multiple topics at once. Each new line will be added as a separate checkbox.</p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
+              <button onClick={() => setIsAddTopicModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
+              <button 
+                onClick={handleAddTopics}
+                disabled={!newTopicTitles.trim()}
+                className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                Add Topics
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Resource Modal */}
+      {isAddResourceModalOpen && (
+        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
+              <h3 className="font-syne text-lg font-bold text-text-primary">Upload to Vault Storage</h3>
+              <button onClick={() => setIsAddResourceModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Resource Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setNewResourceType("link")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors flex items-center justify-center gap-2 " + (newResourceType === 'link' ? 'bg-blue/10 border-blue text-blue' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    <LinkIcon size={14} /> Web Link
+                  </button>
+                  <button 
+                    onClick={() => setNewResourceType("doc")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors flex items-center justify-center gap-2 " + (newResourceType === 'doc' ? 'bg-accent/10 border-accent text-accent' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    <FileText size={14} /> Document / File
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Resource Title</label>
+                <input 
+                  type="text" 
+                  value={newResourceTitle}
+                  onChange={(e) => setNewResourceTitle(e.target.value)}
+                  placeholder="e.g. Official React Documentation" 
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">{newResourceType === 'link' ? 'URL' : 'File URL / Path'}</label>
+                <input 
+                  type="text" 
+                  value={newResourceUrl}
+                  onChange={(e) => setNewResourceUrl(e.target.value)}
+                  placeholder={newResourceType === 'link' ? "https://..." : "Provide a link to the document"} 
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
+              <button onClick={() => setIsAddResourceModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
+              <button 
+                onClick={handleAddResource}
+                disabled={!newResourceTitle.trim()}
+                className="px-6 py-2 bg-blue text-white rounded-lg text-[13px] font-semibold hover:bg-blue/90 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                Save Resource
               </button>
             </div>
           </div>
