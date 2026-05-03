@@ -269,7 +269,7 @@ export default function CollabDashboard() {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
-        {tasks.map(task => (
+        {tasks.map((task: any) => (
           <div key={task.id} className={"p-3 rounded-lg border transition-all " + (task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50')}>
             <div className="flex items-start gap-3 group/task">
               <button onClick={() => handleDeleteTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 opacity-0 group-hover/task:opacity-100 hover:text-coral transition-all">
@@ -568,7 +568,7 @@ export default function CollabDashboard() {
                   <button onClick={() => setIsNewPathModalOpen(true)} className="text-accent text-[12px] font-semibold hover:underline bg-accent/10 px-2 py-1 rounded">+ New Path</button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                  {vaultSessions.map(session => (
+                  {vaultSessions.map((session: any) => (
                      <div 
                        key={session.id} 
                        className={`p-4 rounded-xl border transition-all relative group/session ${activeVaultSessionId === session.id ? 'bg-accent/5 border-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]' : 'bg-surface-2 border-border hover:border-accent/50'}`}
@@ -614,7 +614,7 @@ export default function CollabDashboard() {
                              <button onClick={() => setIsAddTopicModalOpen(true)} className="text-[11px] font-semibold text-text-3 hover:text-accent flex items-center gap-1"><Plus size={12}/> Add Topic</button>
                            </div>
                            <div className="space-y-2">
-                             {session.topics.map(topic => (
+                             {session.topics.map((topic: any) => (
                                <div key={topic.id} className="flex items-center gap-3 p-2 hover:bg-surface-2 rounded-lg transition-colors group">
                                  <button onClick={() => handleToggleTopic(session.id, topic.id)} className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${topic.completed ? 'bg-green border-green text-white shadow-sm' : 'border-text-3 bg-surface group-hover:border-accent'}`}>
                                    {topic.completed && <CheckCircle size={10} />}
@@ -635,7 +635,7 @@ export default function CollabDashboard() {
                              <button onClick={() => setIsAddResourceModalOpen(true)} className="text-[11px] font-semibold text-text-3 hover:text-blue flex items-center gap-1"><Plus size={12}/> Upload Resource</button>
                            </div>
                            <div className="grid grid-cols-2 gap-3">
-                             {session.resources.map(res => (
+                             {session.resources.map((res: any) => (
                                <div key={res.id} className="relative group/resource">
                                  <a href={res.url} target="_blank" className="flex items-center gap-3 p-3 border border-border rounded-xl bg-surface-2 hover:border-blue/50 hover:shadow-sm transition-all h-full">
                                    <div className="w-10 h-10 rounded-lg bg-blue/10 text-blue flex items-center justify-center shrink-0 group-hover/resource:bg-blue group-hover/resource:text-white transition-colors">
