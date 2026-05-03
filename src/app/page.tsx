@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Brain, LayoutGrid, List, Search, GitBranch, Briefcase, Wrench, FileText, Video, FileCheck, RefreshCw, Paperclip, X, Bot, User, Trash2, ExternalLink } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+import Link from "next/link";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
@@ -22,12 +23,11 @@ export default function Home() {
   // Load the real database stats securely from the backend API
   const refreshStats = async () => {
     try {
-      const res = await fetch('/api/resources');
+      const res = await fetch('/api/resources', { cache: 'no-store' });
       const json = await res.json();
       if (json.success && json.data) {
         const data = json.data;
         console.log("Secure API fetch success data:", data);
-      console.log("Supabase fetch success data:", data);
       setResources(data);
       setStats({
         total: data.length,
@@ -203,6 +203,18 @@ export default function Home() {
                  onClick={() => setActiveCategory(cat as string)}
                />
             ))}
+          </nav>
+        </div>
+
+        <div className="px-3 mb-2 mt-6">
+          <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-2">
+            Dashboards
+          </div>
+          <nav className="space-y-1">
+            <Link href="/collab" className="flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium text-text-3 hover:bg-surface-2 hover:text-accent transition-all group border border-transparent hover:border-border">
+              <span className="w-5 h-5 rounded bg-accent-dim text-accent flex items-center justify-center">🌐</span>
+              CollabSpace (New)
+            </Link>
           </nav>
         </div>
 
