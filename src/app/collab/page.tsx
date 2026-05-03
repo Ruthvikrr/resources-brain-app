@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X } from "lucide-react";
+import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus } from "lucide-react";
 import Link from "next/link";
 
 export default function CollabDashboard() {
@@ -22,11 +22,30 @@ export default function CollabDashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [courseQuestions, setCourseQuestions] = useState<{q: string, a: string}[]>([]);
 
-  // Modal State
+  // Modal State for Tasks
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("Both");
   const [newTaskGift, setNewTaskGift] = useState("");
+
+  // Learning Vault State
+  const [vaultSessions, setVaultSessions] = useState([
+    {
+      id: 1,
+      title: "Prompt Engineering Masterclass",
+      progress: 33,
+      topics: [
+        { id: 101, title: "Zero-shot & Few-shot prompting", completed: true },
+        { id: 102, title: "Chain of Thought logic", completed: false },
+        { id: 103, title: "Building RAG architectures", completed: false }
+      ],
+      resources: [
+        { id: 201, type: "link", title: "OpenAI Prompting Guide", url: "https://platform.openai.com/docs/guides/prompt-engineering" },
+        { id: 202, type: "doc", title: "Prompt_Template_v2.pdf", url: "#" }
+      ]
+    }
+  ]);
+  const [activeVaultSessionId, setActiveVaultSessionId] = useState<number | null>(1);
 
   // Mock Presence Data
   const onlineUsers = [
@@ -74,6 +93,18 @@ export default function CollabDashboard() {
     setIsNewTaskModalOpen(false);
     setNewTaskTitle("");
     setNewTaskGift("");
+  };
+
+  const handleToggleTopic = (sessionId: number, topicId: number) => {
+    setVaultSessions(vaultSessions.map(session => {
+      if (session.id === sessionId) {
+        const newTopics = session.topics.map(t => t.id === topicId ? { ...t, completed: !t.completed } : t);
+        const completedCount = newTopics.filter(t => t.completed).length;
+        const progress = Math.round((completedCount / newTopics.length) * 100) || 0;
+        return { ...session, topics: newTopics, progress };
+      }
+      return session;
+    }));
   };
 
   if (!isAuthenticated) {
@@ -223,6 +254,12 @@ export default function CollabDashboard() {
                 Shared Tasks
               </div>
             </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Learning Vault' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Learning Vault')}>
+              <div className="flex items-center gap-3">
+                <Library size={16} className={activeTab === 'Learning Vault' ? 'text-accent-2' : ''} />
+                Learning Vault
+              </div>
+            </div>
           </nav>
 
           <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-3">
@@ -313,7 +350,7 @@ export default function CollabDashboard() {
         </div>
 
         {/* Dashboard Content */}
-        <div className="p-6 md:p-8">
+        <div className="p-6 md:p-8 flex-1 flex flex-col">
           {activeTab === 'Overview' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
@@ -423,8 +460,98 @@ export default function CollabDashboard() {
           )}
 
           {activeTab === 'Tasks' && (
-            <div className="h-[600px] max-w-4xl mx-auto">
+            <div className="flex-1 max-w-4xl w-full mx-auto pb-8">
               {renderAccountabilityBoard()}
+            </div>
+          )}
+          
+          {activeTab === 'Learning Vault' && (
+            <div className="flex flex-1 gap-6 max-h-[calc(100vh-140px)]">
+              {/* Sidebar for Vault Sessions */}
+              <div className="w-1/3 bg-surface rounded-xl border border-border flex flex-col overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-border flex justify-between items-center bg-surface-2/50 shrink-0">
+                  <h3 className="font-syne font-bold text-[14px] flex items-center gap-2"><Library size={14} className="text-accent" /> Learning Paths</h3>
+                  <button className="text-accent text-[12px] font-semibold hover:underline bg-accent/10 px-2 py-1 rounded">+ New Path</button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                  {vaultSessions.map(session => (
+                     <div 
+                       key={session.id} 
+                       onClick={() => setActiveVaultSessionId(session.id)}
+                       className={`p-4 rounded-xl border cursor-pointer transition-all ${activeVaultSessionId === session.id ? 'bg-accent/5 border-accent shadow-[0_0_15px_rgba(var(--accent-rgb),0.1)]' : 'bg-surface-2 border-border hover:border-accent/50'}`}
+                     >
+                       <h4 className="font-semibold text-[13px] mb-3 leading-tight">{session.title}</h4>
+                       <div className="flex justify-between text-[10px] font-semibold text-text-3 mb-1.5">
+                         <span>Progress</span>
+                         <span className="text-accent">{session.progress}%</span>
+                       </div>
+                       <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden border border-border/50">
+                         <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: session.progress + '%' }}></div>
+                       </div>
+                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Content of Active Session */}
+              <div className="flex-1 bg-surface rounded-xl border border-border shadow-sm flex flex-col overflow-hidden">
+                {(() => {
+                  const session = vaultSessions.find(s => s.id === activeVaultSessionId);
+                  if (!session) return <div className="m-auto text-text-3 text-[13px] font-medium">Select a learning path to view details.</div>;
+                  return (
+                    <>
+                      <div className="p-6 border-b border-border bg-gradient-to-r from-accent/5 to-transparent shrink-0">
+                        <h2 className="font-syne text-[22px] font-bold text-text-primary mb-3">{session.title}</h2>
+                        <div className="flex gap-4 text-[12px] text-text-3 font-medium">
+                          <span className="flex items-center gap-1.5 bg-surface px-2 py-1 rounded border border-border"><BookOpen size={12} className="text-accent"/> {session.topics.length} Topics</span>
+                          <span className="flex items-center gap-1.5 bg-surface px-2 py-1 rounded border border-border"><FileText size={12} className="text-blue"/> {session.resources.length} Saved Resources</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-8 custom-scrollbar">
+                        {/* Tracker */}
+                        <div>
+                           <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
+                             <h3 className="font-bold text-[14px] flex items-center gap-2 text-text-primary"><Target size={16} className="text-accent"/> Syllabus & Progress Tracker</h3>
+                             <button className="text-[11px] font-semibold text-text-3 hover:text-accent flex items-center gap-1"><Plus size={12}/> Add Topic</button>
+                           </div>
+                           <div className="space-y-2">
+                             {session.topics.map(topic => (
+                               <div key={topic.id} className="flex items-center gap-3 p-2 hover:bg-surface-2 rounded-lg transition-colors group">
+                                 <button onClick={() => handleToggleTopic(session.id, topic.id)} className={`flex-shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${topic.completed ? 'bg-green border-green text-white shadow-sm' : 'border-text-3 bg-surface group-hover:border-accent'}`}>
+                                   {topic.completed && <CheckCircle size={10} />}
+                                 </button>
+                                 <span className={`text-[13px] ${topic.completed ? 'line-through text-text-3' : 'text-text-primary font-medium'}`}>{topic.title}</span>
+                               </div>
+                             ))}
+                           </div>
+                        </div>
+
+                        {/* Resources */}
+                        <div>
+                           <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
+                             <h3 className="font-bold text-[14px] flex items-center gap-2 text-text-primary"><Globe size={16} className="text-blue"/> Vault Storage</h3>
+                             <button className="text-[11px] font-semibold text-text-3 hover:text-blue flex items-center gap-1"><Plus size={12}/> Upload Resource</button>
+                           </div>
+                           <div className="grid grid-cols-2 gap-3">
+                             {session.resources.map(res => (
+                               <a href={res.url} key={res.id} target="_blank" className="flex items-center gap-3 p-3 border border-border rounded-xl bg-surface-2 hover:border-blue/50 hover:shadow-sm transition-all group">
+                                 <div className="w-10 h-10 rounded-lg bg-blue/10 text-blue flex items-center justify-center shrink-0 group-hover:bg-blue group-hover:text-white transition-colors">
+                                   {res.type === 'link' ? <LinkIcon size={16}/> : <FileText size={16}/>}
+                                 </div>
+                                 <div className="min-w-0">
+                                   <p className="text-[13px] font-bold truncate text-text-primary group-hover:text-blue transition-colors">{res.title}</p>
+                                   <p className="text-[10px] text-text-3 font-semibold uppercase tracking-wide mt-0.5">{res.type}</p>
+                                 </div>
+                               </a>
+                             ))}
+                           </div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           )}
 
@@ -434,7 +561,7 @@ export default function CollabDashboard() {
                 <div className="p-4 border-b border-border">
                   <input type="text" placeholder="Search chats..." className="w-full bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[13px] outline-none focus:border-accent" />
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                   <div className="p-4 border-b border-border bg-surface-2 cursor-pointer">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-semibold text-[13px] text-text-primary">Partner (K)</span>
@@ -457,7 +584,7 @@ export default function CollabDashboard() {
                     <Settings size={16} className="cursor-pointer hover:text-accent" />
                   </div>
                 </div>
-                <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4">
+                <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 custom-scrollbar">
                   <div className="self-center bg-surface border border-border rounded-full px-3 py-1 text-[10px] text-text-3 font-medium">Today</div>
                   <div className="flex gap-3 max-w-[80%]">
                     <div className="w-6 h-6 rounded-full bg-surface-2 flex shrink-0 items-center justify-center text-xs font-bold">K</div>
