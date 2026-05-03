@@ -206,7 +206,7 @@ export default function CollabDashboard() {
                    <div className="h-32 flex items-end gap-2 justify-between mt-2">
                      {/* Mock Chart */}
                      {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
-                       <div key={i} className="w-full bg-accent-dim rounded-t-sm relative group cursor-pointer hover:bg-accent transition-colors" style={{ height: \`\${h}%\` }}>
+                       <div key={i} className="w-full bg-accent-dim rounded-t-sm relative group cursor-pointer hover:bg-accent transition-colors" style={{ height: h + "%" }}>
                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface border border-border text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                            {h} Tasks
                          </div>
@@ -236,24 +236,24 @@ export default function CollabDashboard() {
 
                 <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
                   {tasks.map(task => (
-                    <div key={task.id} className={\`p-3 rounded-lg border transition-all \${task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50'}\`}>
+                    <div key={task.id} className={"p-3 rounded-lg border transition-all " + (task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50')}>
                       <div className="flex items-start gap-3">
                         <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
                           {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
                         </button>
                         <div className="flex-1 min-w-0">
-                          <p className={\`text-[13px] font-medium truncate \${task.completed ? 'line-through text-text-3' : 'text-text-primary'}\`}>
+                          <p className={"text-[13px] font-medium truncate " + (task.completed ? 'line-through text-text-3' : 'text-text-primary')}>
                             {task.title}
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             {/* Ownership Tags */}
-                            <span className={\`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 \${task.assignee === 'Both' ? 'bg-coral-dim text-coral' : task.assignee === 'R' ? 'bg-accent-dim text-accent' : 'bg-blue-dim text-blue'}\`}>
-                              {task.assignee === 'Both' ? 'Dual Task' : \`[ \${task.assignee} ]\`}
+                            <span className={"text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 " + (task.assignee === 'Both' ? 'bg-coral-dim text-coral' : task.assignee === 'R' ? 'bg-accent-dim text-accent' : 'bg-blue-dim text-blue')}>
+                              {task.assignee === 'Both' ? 'Dual Task' : "[ " + task.assignee + " ]"}
                             </span>
                             
                             {/* Gift Reveal System */}
                             {task.gift && (
-                              <div className={\`flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded \${task.gift.revealed ? 'bg-green-dim text-green' : 'bg-surface border border-dashed border-text-3 text-text-3'}\`}>
+                              <div className={"flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded " + (task.gift.revealed ? 'bg-green-dim text-green' : 'bg-surface border border-dashed border-text-3 text-text-3')}>
                                 {task.gift.revealed ? <Unlock size={10} /> : <Lock size={10} />}
                                 {task.gift.revealed ? task.gift.text : 'Mystery Gift'}
                               </div>
