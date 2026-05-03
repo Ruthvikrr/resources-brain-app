@@ -383,8 +383,8 @@ export default function CollabDashboard() {
 
         <div className="mt-auto px-5 pt-4 border-t border-border flex flex-col gap-3 shrink-0">
           <div className="bg-surface-2 border border-border p-3 rounded-lg flex flex-col gap-1">
-            <span className="text-[10px] text-text-3 font-semibold uppercase tracking-wider">Duo-Code Key</span>
-            <span className="text-[12px] font-mono text-accent">{duoCodeInput || "RUTH-K-940X"}</span>
+            <span className="text-[10px] text-text-3 font-semibold uppercase tracking-wider">Couples Sync Key</span>
+            <span className="text-[12px] font-mono text-accent">{"RUTH-K-940X"}</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[11px] text-text-3">
