@@ -604,12 +604,13 @@ export default function CollabDashboard() {
                        </button>
                        <div onClick={() => setActiveVaultSessionId(session.id)} className="cursor-pointer">
                          <h4 className="font-semibold text-[13px] mb-3 pr-6 leading-tight">{session.title}</h4>
-                       <div className="flex justify-between text-[10px] font-semibold text-text-3 mb-1.5">
-                         <span>Progress</span>
-                         <span className="text-accent">{session.progress}%</span>
-                       </div>
-                       <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden border border-border/50">
-                         <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: session.progress + '%' }}></div>
+                         <div className="flex justify-between text-[10px] font-semibold text-text-3 mb-1.5">
+                           <span>Progress</span>
+                           <span className="text-accent">{session.progress}%</span>
+                         </div>
+                         <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden border border-border/50">
+                           <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: session.progress + '%' }}></div>
+                         </div>
                        </div>
                      </div>
                   ))}
