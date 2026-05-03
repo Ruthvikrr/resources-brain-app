@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 export default function CollabDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,11 +17,7 @@ export default function CollabDashboard() {
   const [myMood, setMyMood] = useState("Focus Mode 🎯");
   
   // Tasks (Dual-Sync Accountability Board)
-  const [tasks, setTasks] = useState([
-    { id: 1, title: "Finish Backend API Routes", creator: "R", assignee: "R", completed: true, gift: null },
-    { id: 2, title: "Review Figma Mockups", creator: "R", assignee: "K", completed: false, gift: { text: "I'll buy the coffee today ☕", revealed: false } },
-    { id: 3, title: "Deploy UI to Vercel (Production)", creator: "K", assignee: "Both", completed: false, gift: null },
-  ]);
+  const [tasks, setTasks] = useState<any[]>([]);
 
   const [courseUrl, setCourseUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -32,23 +30,8 @@ export default function CollabDashboard() {
   const [newTaskGift, setNewTaskGift] = useState("");
 
   // Learning Vault State
-  const [vaultSessions, setVaultSessions] = useState([
-    {
-      id: 1,
-      title: "Prompt Engineering Masterclass",
-      progress: 33,
-      topics: [
-        { id: 101, title: "Zero-shot & Few-shot prompting", completed: true },
-        { id: 102, title: "Chain of Thought logic", completed: false },
-        { id: 103, title: "Building RAG architectures", completed: false }
-      ],
-      resources: [
-        { id: 201, type: "link", title: "OpenAI Prompting Guide", url: "https://platform.openai.com/docs/guides/prompt-engineering" },
-        { id: 202, type: "doc", title: "Prompt_Template_v2.pdf", url: "#" }
-      ]
-    }
-  ]);
-  const [activeVaultSessionId, setActiveVaultSessionId] = useState<number | null>(1);
+  const [vaultSessions, setVaultSessions] = useState<any[]>([]);
+  const [activeVaultSessionId, setActiveVaultSessionId] = useState<string | null>(null);
 
   const [isNewPathModalOpen, setIsNewPathModalOpen] = useState(false);
   const [newPathTitle, setNewPathTitle] = useState("");
@@ -67,15 +50,27 @@ export default function CollabDashboard() {
     { id: 2, name: "Partner (K)", role: "Co-Pilot", status: "online", avatar: "K", mood: "Researching 📚" },
   ];
 
-  const handleTickTask = (id: number) => {
-    setTasks(tasks.map(t => {
-      if (t.id === id) {
-        const completed = !t.completed;
-        const gift = t.gift ? { ...t.gift, revealed: completed } : null;
-        return { ...t, completed, gift };
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const unsubTasks = onSnapshot(collection(db, 'collab_tasks'), (snapshot) => {
+      setTasks(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    const unsubVault = onSnapshot(collection(db, 'collab_vault_sessions'), (snapshot) => {
+      const loadedSessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setVaultSessions(loadedSessions);
+      if (loadedSessions.length > 0 && !activeVaultSessionId) {
+         setActiveVaultSessionId(loadedSessions[0].id);
       }
-      return t;
-    }));
+    });
+    return () => { unsubTasks(); unsubVault(); };
+  }, [isAuthenticated, activeVaultSessionId]);
+
+  const handleTickTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const completed = !task.completed;
+    const gift = task.gift ? { ...task.gift, revealed: completed } : null;
+    await updateDoc(doc(db, 'collab_tasks', id), { completed, gift });
   };
 
   const analyzeCourse = () => {
@@ -91,47 +86,40 @@ export default function CollabDashboard() {
     }, 1500);
   };
 
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     if (!newTaskTitle) return;
-    setTasks([
-      {
-        id: Date.now(),
-        title: newTaskTitle,
-        creator: "R",
-        assignee: newTaskAssignee,
-        completed: false,
-        gift: newTaskGift ? { text: newTaskGift, revealed: false } : null
-      },
-      ...tasks
-    ]);
+    await addDoc(collection(db, 'collab_tasks'), {
+      title: newTaskTitle,
+      creator: activeUser?.avatar || "R",
+      assignee: newTaskAssignee,
+      completed: false,
+      gift: newTaskGift ? { text: newTaskGift, revealed: false } : null,
+      createdAt: Date.now()
+    });
     setIsNewTaskModalOpen(false);
     setNewTaskTitle("");
     setNewTaskGift("");
   };
 
-  const handleToggleTopic = (sessionId: number, topicId: number) => {
-    setVaultSessions(vaultSessions.map(session => {
-      if (session.id === sessionId) {
-        const newTopics = session.topics.map(t => t.id === topicId ? { ...t, completed: !t.completed } : t);
-        const completedCount = newTopics.filter(t => t.completed).length;
-        const progress = Math.round((completedCount / newTopics.length) * 100) || 0;
-        return { ...session, topics: newTopics, progress };
-      }
-      return session;
-    }));
+  const handleToggleTopic = async (sessionId: string, topicId: number) => {
+    const session = vaultSessions.find(s => s.id === sessionId);
+    if (!session) return;
+    const newTopics = session.topics.map((t: any) => t.id === topicId ? { ...t, completed: !t.completed } : t);
+    const completedCount = newTopics.filter((t: any) => t.completed).length;
+    const progress = Math.round((completedCount / newTopics.length) * 100) || 0;
+    await updateDoc(doc(db, 'collab_vault_sessions', sessionId), { topics: newTopics, progress });
   };
 
-  const handleCreateVaultSession = () => {
+  const handleCreateVaultSession = async () => {
     if (!newPathTitle) return;
-    const newSession = {
-      id: Date.now(),
+    const newDoc = await addDoc(collection(db, 'collab_vault_sessions'), {
       title: newPathTitle,
       progress: 0,
       topics: [],
-      resources: []
-    };
-    setVaultSessions([newSession, ...vaultSessions]);
-    setActiveVaultSessionId(newSession.id);
+      resources: [],
+      createdAt: Date.now()
+    });
+    setActiveVaultSessionId(newDoc.id);
     setIsNewPathModalOpen(false);
     setNewPathTitle("");
   };
@@ -150,75 +138,61 @@ export default function CollabDashboard() {
     }
   };
 
-  const handleAddTopics = () => {
-    if (!newTopicTitles.trim() || activeVaultSessionId === null) return;
+  const handleAddTopics = async () => {
+    if (!newTopicTitles.trim() || !activeVaultSessionId) return;
     const titles = newTopicTitles.split('\n').map(t => t.trim()).filter(t => t);
     if (titles.length === 0) return;
-
-    setVaultSessions(vaultSessions.map(session => {
-      if (session.id === activeVaultSessionId) {
-        const newTopicsList = [...session.topics];
-        titles.forEach(t => {
-          newTopicsList.push({ id: Date.now() + Math.random(), title: t, completed: false });
-        });
-        const progress = Math.round((newTopicsList.filter(t => t.completed).length / newTopicsList.length) * 100) || 0;
-        return { ...session, topics: newTopicsList, progress };
-      }
-      return session;
-    }));
+    const session = vaultSessions.find(s => s.id === activeVaultSessionId);
+    if (!session) return;
+    const newTopicsList = [...session.topics];
+    titles.forEach(t => {
+      newTopicsList.push({ id: Date.now() + Math.random(), title: t, completed: false });
+    });
+    const progress = Math.round((newTopicsList.filter(t => t.completed).length / newTopicsList.length) * 100) || 0;
+    await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { topics: newTopicsList, progress });
     setIsAddTopicModalOpen(false);
     setNewTopicTitles("");
   };
 
-  const handleAddResource = () => {
-    if (!newResourceTitle.trim() || activeVaultSessionId === null) return;
-    setVaultSessions(vaultSessions.map(session => {
-      if (session.id === activeVaultSessionId) {
-        return {
-          ...session,
-          resources: [...session.resources, {
-            id: Date.now(),
-            title: newResourceTitle,
-            type: newResourceType,
-            url: newResourceUrl || "#"
-          }]
-        };
-      }
-      return session;
-    }));
+  const handleAddResource = async () => {
+    if (!newResourceTitle.trim() || !activeVaultSessionId) return;
+    const session = vaultSessions.find(s => s.id === activeVaultSessionId);
+    if (!session) return;
+    const newResources = [...session.resources, {
+      id: Date.now(),
+      title: newResourceTitle,
+      type: newResourceType,
+      url: newResourceUrl || "#"
+    }];
+    await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { resources: newResources });
     setIsAddResourceModalOpen(false);
     setNewResourceTitle("");
     setNewResourceUrl("");
   };
 
-  const handleDeleteTask = (id: number) => {
-    setTasks(tasks.filter(t => t.id !== id));
+  const handleDeleteTask = async (id: string) => {
+    await deleteDoc(doc(db, 'collab_tasks', id));
   };
 
-  const handleDeleteVaultSession = (id: number) => {
-    setVaultSessions(vaultSessions.filter(s => s.id !== id));
+  const handleDeleteVaultSession = async (id: string) => {
+    await deleteDoc(doc(db, 'collab_vault_sessions', id));
     if (activeVaultSessionId === id) setActiveVaultSessionId(null);
   };
 
-  const handleDeleteTopic = (sessionId: number, topicId: number) => {
-    setVaultSessions(vaultSessions.map(session => {
-      if (session.id === sessionId) {
-        const newTopics = session.topics.filter(t => t.id !== topicId);
-        const completedCount = newTopics.filter(t => t.completed).length;
-        const progress = newTopics.length ? Math.round((completedCount / newTopics.length) * 100) : 0;
-        return { ...session, topics: newTopics, progress };
-      }
-      return session;
-    }));
+  const handleDeleteTopic = async (sessionId: string, topicId: number) => {
+    const session = vaultSessions.find(s => s.id === sessionId);
+    if (!session) return;
+    const newTopics = session.topics.filter((t: any) => t.id !== topicId);
+    const completedCount = newTopics.filter((t: any) => t.completed).length;
+    const progress = newTopics.length ? Math.round((completedCount / newTopics.length) * 100) : 0;
+    await updateDoc(doc(db, 'collab_vault_sessions', sessionId), { topics: newTopics, progress });
   };
 
-  const handleDeleteResource = (sessionId: number, resourceId: number) => {
-    setVaultSessions(vaultSessions.map(session => {
-      if (session.id === sessionId) {
-        return { ...session, resources: session.resources.filter(r => r.id !== resourceId) };
-      }
-      return session;
-    }));
+  const handleDeleteResource = async (sessionId: string, resourceId: number) => {
+    const session = vaultSessions.find(s => s.id === sessionId);
+    if (!session) return;
+    const newResources = session.resources.filter((r: any) => r.id !== resourceId);
+    await updateDoc(doc(db, 'collab_vault_sessions', sessionId), { resources: newResources });
   };
 
   if (!isAuthenticated) {
