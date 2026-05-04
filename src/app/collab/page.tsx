@@ -21,7 +21,8 @@ export default function CollabDashboard() {
 
   const [courseUrl, setCourseUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [courseQuestions, setCourseQuestions] = useState<{q: string, a: string}[]>([]);
+  const [aiSessions, setAiSessions] = useState<any[]>([]);
+  const [activeAiSessionId, setActiveAiSessionId] = useState<string | null>(null);
 
   // Modal State for Tasks
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
@@ -62,8 +63,15 @@ export default function CollabDashboard() {
          setActiveVaultSessionId(loadedSessions[0].id);
       }
     });
-    return () => { unsubTasks(); unsubVault(); };
-  }, [isAuthenticated, activeVaultSessionId]);
+    const unsubAi = onSnapshot(collection(db, 'collab_ai_sessions'), (snapshot) => {
+      const loadedSessions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAiSessions(loadedSessions.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0)));
+      if (loadedSessions.length > 0 && !activeAiSessionId) {
+         setActiveAiSessionId(loadedSessions[0].id);
+      }
+    });
+    return () => { unsubTasks(); unsubVault(); unsubAi(); };
+  }, [isAuthenticated, activeVaultSessionId, activeAiSessionId]);
 
   const handleTickTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);
@@ -73,17 +81,31 @@ export default function CollabDashboard() {
     await updateDoc(doc(db, 'collab_tasks', id), { completed, gift });
   };
 
-  const analyzeCourse = () => {
+  const analyzeCourse = async () => {
     if (!courseUrl) return;
     setIsAnalyzing(true);
-    setTimeout(() => {
-      setCourseQuestions([
-        { q: "What is the primary difference between Client and Server Components?", a: "" },
-        { q: "Explain how real-time caching handles background revalidation.", a: "" },
-        { q: "How does 'Shared vs Solo' architecture improve accountability?", a: "" },
-      ]);
-      setIsAnalyzing(false);
-    }, 1500);
+    
+    // Simulate API Call for generated quiz
+    const generatedQuestions = [
+      { q: "What are the core concepts mentioned in this link?", a: "" },
+      { q: "How can this knowledge be applied practically?", a: "" },
+      { q: "What is the most surprising fact from this content?", a: "" },
+    ];
+    
+    try {
+      const newDoc = await addDoc(collection(db, 'collab_ai_sessions'), {
+        link: courseUrl,
+        title: courseUrl.replace(/^https?:\/\//, '').split('/')[0] + ' Summary',
+        questions: generatedQuestions,
+        createdAt: Date.now(),
+        creator: activeUser?.avatar || "R"
+      });
+      setActiveAiSessionId(newDoc.id);
+      setCourseUrl("");
+    } catch (e: any) {
+      alert("Error saving AI session: " + e.message);
+    }
+    setIsAnalyzing(false);
   };
 
   const handleCreateTask = async () => {
@@ -396,6 +418,12 @@ export default function CollabDashboard() {
                 Learning Vault
               </div>
             </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'AI Study Buddy' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('AI Study Buddy')}>
+              <div className="flex items-center gap-3">
+                <Brain size={16} className={activeTab === 'AI Study Buddy' ? 'text-accent-2' : ''} />
+                AI Study Buddy
+              </div>
+            </div>
           </nav>
 
           <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-3">
@@ -552,64 +580,8 @@ export default function CollabDashboard() {
                 {renderAccountabilityBoard()}
               </div>
 
-              {/* RIGHT: AI Course Analyzer */}
+              {/* RIGHT: Activity Log */}
               <div className="col-span-1 flex flex-col gap-6">
-                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-syne text-[16px] font-bold text-text-primary flex items-center gap-2">
-                      <Brain size={16} className="text-blue" />
-                      Study Buddy AI
-                    </h3>
-                  </div>
-
-                  <p className="text-[12px] text-text-3 mb-4 leading-relaxed">
-                    Paste a course link or article. The AI will summarize it and generate active-recall questions to quiz your partner.
-                  </p>
-
-                  <div className="flex gap-2 mb-6">
-                    <input 
-                      type="text" 
-                      value={courseUrl}
-                      onChange={(e) => setCourseUrl(e.target.value)}
-                      placeholder="https://..." 
-                      className="flex-1 bg-surface-2 border border-border rounded-lg px-3 py-2 text-[12px] outline-none focus:border-blue transition-colors"
-                    />
-                    <button 
-                      onClick={analyzeCourse}
-                      disabled={isAnalyzing || !courseUrl}
-                      className="px-4 py-2 bg-blue text-white rounded-lg text-[12px] font-semibold hover:bg-blue/90 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[80px]"
-                    >
-                      {isAnalyzing ? <span className="animate-spin text-lg leading-none">⚙</span> : 'Analyze'}
-                    </button>
-                  </div>
-
-                  {courseQuestions.length > 0 && (
-                    <div className="flex flex-col overflow-hidden max-h-[300px]">
-                      <h4 className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-3 flex items-center gap-1">
-                        <Zap size={12} className="text-coral" /> Generated Quiz
-                      </h4>
-                      <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-1">
-                        {courseQuestions.map((q, i) => (
-                          <div key={i} className="bg-surface-2 border border-border rounded-lg p-3 group cursor-pointer hover:border-blue/50 transition-colors">
-                            <p className="text-[12px] font-medium text-text-primary mb-2">Q: {q.q}</p>
-                            <button className="text-[10px] font-semibold text-blue flex items-center gap-1">
-                              <MessageSquare size={10} /> Send to Partner
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {courseQuestions.length === 0 && !isAnalyzing && (
-                    <div className="flex-col items-center justify-center text-center opacity-50 py-8">
-                      <BookOpen size={32} className="text-text-3 mb-2 mx-auto" />
-                      <p className="text-[11px] text-text-3 max-w-[150px] mx-auto">Awaiting material for analysis...</p>
-                    </div>
-                  )}
-                </div>
 
                 {/* Duo Activity Log */}
                 <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col relative overflow-hidden flex-1">
@@ -885,6 +857,98 @@ export default function CollabDashboard() {
           </div>
         </div>
       )}
+
+          {activeTab === 'AI Study Buddy' && (
+            <div className="flex flex-1 gap-6 max-h-[calc(100vh-140px)] w-full max-w-[1200px] mx-auto pb-8">
+              {/* Sidebar for AI Sessions */}
+              <div className="w-1/3 bg-surface rounded-xl border border-border flex flex-col overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-border flex justify-between items-center bg-surface-2/50 shrink-0">
+                  <h3 className="font-syne font-bold text-[14px] flex items-center gap-2"><Brain size={14} className="text-blue" /> AI Sessions</h3>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+                  {aiSessions.length > 0 ? aiSessions.map((session: any) => (
+                    <div 
+                      key={session.id} 
+                      onClick={() => setActiveAiSessionId(session.id)}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all ${activeAiSessionId === session.id ? 'bg-blue/10 border-blue' : 'bg-surface border-border hover:border-blue/50'}`}
+                    >
+                      <h4 className={`font-semibold text-[13px] truncate ${activeAiSessionId === session.id ? 'text-blue' : 'text-text-primary'}`}>{session.title || 'Summary'}</h4>
+                      <div className="flex items-center justify-between mt-2 text-[10px]">
+                        <span className="text-text-3 font-medium bg-surface-2 px-1.5 py-0.5 rounded truncate max-w-[120px]">{session.link}</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="text-center py-8 text-[12px] text-text-3">No AI sessions yet. Paste a link to get started!</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Main Area */}
+              <div className="flex-1 flex flex-col bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-border bg-surface-2/50 shrink-0 flex flex-col">
+                  <h2 className="font-syne text-xl font-bold text-text-primary mb-2 flex items-center gap-2">
+                    <Zap size={20} className="text-coral" /> New AI Analysis
+                  </h2>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={courseUrl}
+                      onChange={(e) => setCourseUrl(e.target.value)}
+                      placeholder="Paste any article or course link (https://...)" 
+                      className="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-blue transition-colors"
+                    />
+                    <button 
+                      onClick={analyzeCourse}
+                      disabled={isAnalyzing || !courseUrl}
+                      className="px-6 py-2.5 bg-blue text-white rounded-lg text-[13px] font-semibold hover:bg-blue/90 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[120px] shadow-sm"
+                    >
+                      {isAnalyzing ? <span className="animate-spin text-lg leading-none">⚙</span> : 'Analyze Link'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-bg/30">
+                  {activeAiSessionId ? (() => {
+                    const session = aiSessions.find((s: any) => s.id === activeAiSessionId);
+                    if (!session) return null;
+                    return (
+                      <div className="flex flex-col gap-6 max-w-3xl mx-auto">
+                        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
+                          <div>
+                            <h3 className="font-syne text-[18px] font-bold text-text-primary mb-1">{session.title}</h3>
+                            <a href={session.link} target="_blank" rel="noopener noreferrer" className="text-[12px] text-blue hover:underline break-all">{session.link}</a>
+                          </div>
+                        </div>
+                        
+                        {session.questions && session.questions.length > 0 ? (
+                           <div className="space-y-4">
+                              <h4 className="font-bold text-[13px] text-text-2 uppercase tracking-wider mb-2">Generated Quiz Questions</h4>
+                              {session.questions.map((q: any, i: number) => (
+                                <div key={i} className="bg-surface border border-border rounded-xl p-4 group">
+                                  <p className="text-[14px] font-medium text-text-primary mb-3">Q: {q.q}</p>
+                                  <button className="text-[11px] font-semibold text-blue bg-blue/10 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue/20 transition-colors w-max">
+                                    <MessageSquare size={12} /> Send to Live Chat
+                                  </button>
+                                </div>
+                              ))}
+                           </div>
+                        ) : (
+                           <p className="text-[13px] text-text-3 italic">No questions generated.</p>
+                        )}
+                      </div>
+                    );
+                  })() : (
+                    <div className="h-full flex flex-col items-center justify-center opacity-50">
+                      <Brain size={48} className="text-blue mb-4" />
+                      <h3 className="font-syne text-lg font-bold mb-1">AI Study Buddy</h3>
+                      <p className="text-[13px] max-w-[250px] text-center">Select an existing session from the left or paste a new link above to generate study materials.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
       {/* New Path Modal */}
       {isNewPathModalOpen && (
