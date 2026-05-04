@@ -45,9 +45,50 @@ export default function CollabDashboard() {
   const [newResourceType, setNewResourceType] = useState("link");
   const [newResourceUrl, setNewResourceUrl] = useState("");
 
+  const [arcadeStats, setArcadeStats] = useState({
+    keer: { badges: 0, titles: [] as string[], loading: true },
+    ruthvik: { badges: 0, titles: [] as string[], loading: true }
+  });
+
+  useEffect(() => {
+    async function fetchArcadeStats() {
+      try {
+        const keerRes = await fetch('/api/arcade?url=https://www.cloudskillsboost.google/public_profiles/7976f6ba-c32e-47ea-ba20-843a1fb18097');
+        const keerData = await keerRes.json();
+        setArcadeStats(prev => ({
+          ...prev,
+          keer: { badges: keerData.badges || 0, titles: keerData.titles || [], loading: false }
+        }));
+      } catch (e) {
+        setArcadeStats(prev => ({ ...prev, keer: { badges: 0, titles: [], loading: false }}));
+      }
+      
+      try {
+        const ruthvikRes = await fetch('/api/arcade?url=https://www.cloudskillsboost.google/public_profiles/e01ab80f-9bb3-4afc-8e48-42ac6186403d');
+        const ruthvikData = await ruthvikRes.json();
+        setArcadeStats(prev => ({
+          ...prev,
+          ruthvik: { badges: ruthvikData.badges || 0, titles: ruthvikData.titles || [], loading: false }
+        }));
+      } catch (e) {
+        setArcadeStats(prev => ({ ...prev, ruthvik: { badges: 0, titles: [], loading: false }}));
+      }
+    }
+    
+    // Fetch immediately on load
+    fetchArcadeStats();
+
+    // Poll every 5 minutes to keep it real-time while the page is open
+    const interval = setInterval(fetchArcadeStats, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Mock Presence Data
-  const onlineUsers = [
-    { id: 1, name: "Ruthvik", role: "Admin", status: "online", avatar: "R", mood: myMood },
+  const onlineUsers = activeUser?.avatar === 'K' ? [
+    { id: 2, name: "Keer (You)", role: "Co-Pilot", status: "online", avatar: "K", mood: myMood },
+    { id: 1, name: "Babe (Ruthvik) ❤️", role: "Admin", status: "online", avatar: "R", mood: "Focus Mode 🎯" }
+  ] : [
+    { id: 1, name: "Ruthvik (You)", role: "Admin", status: "online", avatar: "R", mood: myMood },
     { id: 2, name: "Babe (Keer) ❤️", role: "Co-Pilot", status: "online", avatar: "K", mood: "Researching 📚" },
   ];
 
@@ -424,6 +465,12 @@ export default function CollabDashboard() {
                 AI Study Buddy
               </div>
             </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Arcade' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Arcade')}>
+              <div className="flex items-center gap-3">
+                <Globe size={16} className={activeTab === 'Arcade' ? 'text-accent-2' : ''} />
+                Google Arcade
+              </div>
+            </div>
           </nav>
 
           <div className="text-[10px] font-medium tracking-widest text-text-3 uppercase px-2 mb-3">
@@ -507,8 +554,8 @@ export default function CollabDashboard() {
               <Bell size={18} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-coral rounded-full"></span>
             </button>
-            <div className="w-9 h-9 bg-accent text-white rounded-lg flex items-center justify-center font-bold shadow-md cursor-pointer">
-              R
+            <div className={`w-9 h-9 text-white rounded-lg flex items-center justify-center font-bold shadow-md cursor-pointer ${activeUser?.avatar === 'K' ? 'bg-coral' : 'bg-accent'}`}>
+              {activeUser?.avatar || 'R'}
             </div>
           </div>
         </div>
@@ -536,8 +583,8 @@ export default function CollabDashboard() {
                     </div>
                   </div>
                   <div className="flex justify-between mt-4 text-[10px] font-bold tracking-wider uppercase">
-                    <span className="text-blue">YOU</span>
-                    <span className="text-coral">BAE</span>
+                    <span className="text-blue">{activeUser?.avatar === 'K' ? 'RUTHVIK' : 'YOU'}</span>
+                    <span className="text-coral">{activeUser?.avatar === 'K' ? 'YOU' : 'BAE'}</span>
                   </div>
                   <div className="text-center text-[10px] font-bold text-text-3 tracking-widest uppercase mt-4">
                     {Math.round(progressPercent)}% Synced Progress
@@ -559,13 +606,13 @@ export default function CollabDashboard() {
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 rounded-full bg-blue border-[4px] border-blue/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">R</div>
                       <div className="font-syne text-3xl font-bold text-blue">{ruthvikPoints}</div>
-                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">YOU</div>
+                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">{activeUser?.avatar === 'K' ? 'RUTHVIK' : 'YOU'}</div>
                     </div>
                     <div className="font-syne text-2xl font-bold text-coral/80">VS</div>
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 rounded-full bg-coral border-[4px] border-coral/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">K</div>
                       <div className="font-syne text-3xl font-bold text-coral">{keerPoints}</div>
-                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">Babe</div>
+                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">{activeUser?.avatar === 'K' ? 'YOU' : 'BABE'}</div>
                     </div>
                   </div>
 
@@ -573,6 +620,44 @@ export default function CollabDashboard() {
                     Push harder! 🚀
                   </button>
                 </div>
+
+                {/* Google Cloud Arcade Tracking */}
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                  <div className="text-blue font-bold flex items-center gap-1 text-[12px] tracking-widest uppercase mb-4">
+                    <Globe size={14} /> Google Arcade
+                  </div>
+                  <h3 className="font-syne text-xl font-bold text-text-primary mb-2">Cloud Skills Boost ☁️</h3>
+                  <p className="text-[12px] text-text-3 leading-relaxed px-4 mb-6">
+                    Tracking public profile badges earned. Keep crushing those labs! 💻
+                  </p>
+
+                  <div className="flex items-center justify-center gap-6 w-full mb-6">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-blue border-[4px] border-blue/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">R</div>
+                      <div className="font-syne text-3xl font-bold text-blue">
+                        {arcadeStats.ruthvik.loading ? '...' : arcadeStats.ruthvik.badges}
+                      </div>
+                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">
+                        {activeUser?.avatar === 'K' ? 'RUTHVIK' : 'YOU'}
+                      </div>
+                    </div>
+                    <div className="font-syne text-2xl font-bold text-border">VS</div>
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-coral border-[4px] border-coral/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">K</div>
+                      <div className="font-syne text-3xl font-bold text-coral">
+                        {arcadeStats.keer.loading ? '...' : arcadeStats.keer.badges}
+                      </div>
+                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">
+                        {activeUser?.avatar === 'K' ? 'YOU' : 'BABE'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button onClick={() => setActiveTab('Arcade')} className="w-full py-2.5 rounded-xl border border-border bg-surface-2 hover:bg-surface text-text-primary text-[12px] font-bold transition-all flex items-center justify-center gap-2">
+                    View All Badges 🏆
+                  </button>
+                </div>
+
               </div>
 
               {/* CENTER: Accountability Board (Task Engine) */}
@@ -614,7 +699,7 @@ export default function CollabDashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-semibold text-text-primary truncate">{act.title}</p>
-                          <p className="text-[10px] text-text-3 mt-0.5">{act.assignee === 'K' ? 'Babe' : act.assignee === 'R' ? 'You' : 'Both'} completed this task.</p>
+                          <p className="text-[10px] text-text-3 mt-0.5">{act.assignee === 'Both' ? 'Both' : (act.assignee === activeUser?.avatar ? 'You' : (act.assignee === 'K' ? 'Babe' : 'Ruthvik'))} completed this task.</p>
                         </div>
                         <div className="text-green font-bold text-[13px] flex-shrink-0">
                           +50
@@ -795,82 +880,6 @@ export default function CollabDashboard() {
               </div>
             </div>
           )}
-        </div>
-      </main>
-
-      {/* New Task Modal */}
-      {isNewTaskModalOpen && (
-        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
-              <h3 className="font-syne text-lg font-bold text-text-primary">Create Shared Task</h3>
-              <button onClick={() => setIsNewTaskModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Task Title</label>
-                <input 
-                  type="text" 
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="What needs to be done?" 
-                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Assign To</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button 
-                    onClick={() => setNewTaskAssignee("R")}
-                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'R' ? 'bg-accent/10 border-accent text-accent' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
-                  >
-                    Me (R)
-                  </button>
-                  <button 
-                    onClick={() => setNewTaskAssignee("K")}
-                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'K' ? 'bg-blue/10 border-blue text-blue' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
-                  >
-                    Partner (K)
-                  </button>
-                  <button 
-                    onClick={() => setNewTaskAssignee("Both")}
-                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'Both' ? 'bg-coral/10 border-coral text-coral' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
-                  >
-                    Both (Dual)
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block flex items-center gap-1"><Gift size={12}/> Attach Mystery Gift (Optional)</label>
-                <input 
-                  type="text" 
-                  value={newTaskGift}
-                  onChange={(e) => setNewTaskGift(e.target.value)}
-                  placeholder="e.g. I'll buy you coffee tomorrow!" 
-                  className="w-full bg-surface border border-dashed border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
-                />
-                <p className="text-[10px] text-text-3 mt-1.5">The gift will remain locked until the task is checked off.</p>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
-              <button onClick={() => setIsNewTaskModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
-              <button 
-                onClick={handleCreateTask}
-                disabled={!newTaskTitle}
-                className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
-              >
-                Create Task
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
           {activeTab === 'AI Study Buddy' && (
             <div className="flex flex-1 gap-6 w-full max-w-[1200px] mx-auto h-[calc(100vh-140px)] min-h-[600px]">
@@ -963,6 +972,150 @@ export default function CollabDashboard() {
               </div>
             </div>
           )}
+
+          {activeTab === 'Arcade' && (
+            <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto pb-8 animate-in fade-in">
+              <div className="bg-surface rounded-xl border border-border p-8 shadow-sm flex items-center justify-center gap-12 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-coral/5 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div className="flex flex-col items-center z-10">
+                  <div className="w-24 h-24 rounded-full bg-blue border-[4px] border-blue/20 shadow-lg flex items-center justify-center text-white font-bold text-3xl mb-4">R</div>
+                  <div className="font-syne text-5xl font-bold text-blue">{arcadeStats.ruthvik.loading ? '...' : arcadeStats.ruthvik.badges}</div>
+                  <div className="text-[12px] font-bold text-text-3 tracking-widest uppercase mt-2">Ruthvik (Admin)</div>
+                </div>
+                
+                <div className="flex flex-col items-center z-10 px-8">
+                  <Globe size={40} className="text-border mb-2" />
+                  <div className="font-syne text-3xl font-bold text-text-primary tracking-widest">ARCADE</div>
+                  <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">Live Badge Tracker</div>
+                </div>
+
+                <div className="flex flex-col items-center z-10">
+                  <div className="w-24 h-24 rounded-full bg-coral border-[4px] border-coral/20 shadow-lg flex items-center justify-center text-white font-bold text-3xl mb-4">K</div>
+                  <div className="font-syne text-5xl font-bold text-coral">{arcadeStats.keer.loading ? '...' : arcadeStats.keer.badges}</div>
+                  <div className="text-[12px] font-bold text-text-3 tracking-widest uppercase mt-2">Keer (Co-Pilot)</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col max-h-[600px]">
+                  <h3 className="font-syne text-xl font-bold text-blue mb-4 flex items-center gap-2 shrink-0">
+                    <Shield size={20} /> Ruthvik's Trophies
+                  </h3>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                    {arcadeStats.ruthvik.loading ? (
+                      <p className="text-text-3 text-sm italic py-4">Syncing live data from Google Cloud Skills Boost...</p>
+                    ) : arcadeStats.ruthvik.titles.length > 0 ? (
+                      arcadeStats.ruthvik.titles.map((title, i) => (
+                        <div key={i} className="bg-surface-2 border border-border p-3.5 rounded-xl text-[13px] font-medium text-text-primary shadow-sm hover:border-blue/50 transition-colors flex items-center gap-3">
+                          <span className="text-blue">🏆</span> {title}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-text-3 text-[13px] py-4">No badges found. Time to hit the labs!</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col max-h-[600px]">
+                  <h3 className="font-syne text-xl font-bold text-coral mb-4 flex items-center gap-2 shrink-0">
+                    <Flame size={20} /> Keer's Trophies
+                  </h3>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
+                    {arcadeStats.keer.loading ? (
+                      <p className="text-text-3 text-sm italic py-4">Syncing live data from Google Cloud Skills Boost...</p>
+                    ) : arcadeStats.keer.titles.length > 0 ? (
+                      arcadeStats.keer.titles.map((title, i) => (
+                        <div key={i} className="bg-surface-2 border border-border p-3.5 rounded-xl text-[13px] font-medium text-text-primary shadow-sm hover:border-coral/50 transition-colors flex items-center gap-3">
+                          <span className="text-coral">🏆</span> {title}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-text-3 text-[13px] py-4">No badges found. Time to hit the labs!</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* New Task Modal */}
+      {isNewTaskModalOpen && (
+        <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
+              <h3 className="font-syne text-lg font-bold text-text-primary">Create Shared Task</h3>
+              <button onClick={() => setIsNewTaskModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Task Title</label>
+                <input 
+                  type="text" 
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  placeholder="What needs to be done?" 
+                  className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block">Assign To</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button 
+                    onClick={() => setNewTaskAssignee("R")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'R' ? 'bg-accent/10 border-accent text-accent' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    {activeUser?.avatar === 'R' ? 'Me (R)' : 'Ruthvik (R)'}
+                  </button>
+                  <button 
+                    onClick={() => setNewTaskAssignee("K")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'K' ? 'bg-coral/10 border-coral text-coral' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    {activeUser?.avatar === 'K' ? 'Me (K)' : 'Partner (K)'}
+                  </button>
+                  <button 
+                    onClick={() => setNewTaskAssignee("Both")}
+                    className={"py-2 px-3 rounded-lg border text-[12px] font-medium transition-colors " + (newTaskAssignee === 'Both' ? 'bg-coral/10 border-coral text-coral' : 'bg-surface-2 border-border text-text-3 hover:border-text-3')}
+                  >
+                    Both (Dual)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-2 block flex items-center gap-1"><Gift size={12}/> Attach Mystery Gift (Optional)</label>
+                <input 
+                  type="text" 
+                  value={newTaskGift}
+                  onChange={(e) => setNewTaskGift(e.target.value)}
+                  placeholder="e.g. I'll buy you coffee tomorrow!" 
+                  className="w-full bg-surface border border-dashed border-border rounded-lg px-4 py-2.5 text-[13px] outline-none focus:border-accent transition-colors"
+                />
+                <p className="text-[10px] text-text-3 mt-1.5">The gift will remain locked until the task is checked off.</p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
+              <button onClick={() => setIsNewTaskModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
+              <button 
+                onClick={handleCreateTask}
+                disabled={!newTaskTitle}
+                className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
+              >
+                Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Path Modal */}
       {isNewPathModalOpen && (
