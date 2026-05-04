@@ -470,8 +470,8 @@ export default function CollabDashboard() {
       <main className="ml-0 md:ml-[240px] flex-1 flex flex-col min-h-screen bg-bg">
         {/* Topbar */}
         <div className="sticky top-0 z-10 px-8 py-5 border-b border-border flex items-center justify-between bg-surface/90 backdrop-blur-md">
-          <div className="flex items-center gap-4">
-            <h1 className="font-syne text-xl font-bold text-text-primary hidden md:block">
+          <div className="flex flex-wrap items-center gap-4 flex-1">
+            <h1 className="font-syne text-xl font-bold text-text-primary hidden lg:block whitespace-nowrap">
               {activeTab}
             </h1>
             
@@ -485,12 +485,12 @@ export default function CollabDashboard() {
               </div>
             </div>
 
-            <span className="px-2 py-1 bg-green-dim text-green text-[11px] font-semibold rounded-md flex items-center gap-1">
+            <span className="px-2 py-1 bg-green-dim text-green text-[11px] font-semibold rounded-md flex items-center gap-1 shrink-0 whitespace-nowrap">
               <Activity size={10} /> Live Socket.io Sync
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 shrink-0 ml-4">
             {/* Status Selector */}
             <select 
               value={myMood}
@@ -873,7 +873,7 @@ export default function CollabDashboard() {
       )}
 
           {activeTab === 'AI Study Buddy' && (
-            <div className="flex flex-1 gap-6 max-h-[calc(100vh-140px)] w-full max-w-[1200px] mx-auto pb-8">
+            <div className="flex flex-1 gap-6 w-full max-w-[1200px] mx-auto h-[calc(100vh-140px)] min-h-[600px]">
               {/* Sidebar for AI Sessions */}
               <div className="w-1/3 bg-surface rounded-xl border border-border flex flex-col overflow-hidden shadow-sm">
                 <div className="p-4 border-b border-border flex justify-between items-center bg-surface-2/50 shrink-0">
