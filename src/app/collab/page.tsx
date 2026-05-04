@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2, HeartHandshake } from "lucide-react";
+import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2, HeartHandshake, Heart, Trophy } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
@@ -226,6 +226,16 @@ export default function CollabDashboard() {
   const taskCounts = getGraphData();
   const maxTasks = Math.max(...taskCounts, 5);
   const graphHeights = taskCounts.map(count => Math.round((count / maxTasks) * 100));
+
+  const ruthvikPoints = tasks.filter((t: any) => t.completed && (t.assignee === 'R' || t.assignee === 'Both')).length * 50;
+  const keerPoints = tasks.filter((t: any) => t.completed && (t.assignee === 'K' || t.assignee === 'Both')).length * 50;
+  const totalPoints = ruthvikPoints + keerPoints || 1;
+  const heartPosition = Math.max(10, Math.min(90, (ruthvikPoints / totalPoints) * 100));
+
+  const recentActivities = [...tasks]
+     .filter((t: any) => t.completed)
+     .sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0))
+     .slice(0, 3);
 
   if (!isAuthenticated) {
     return (
@@ -480,39 +490,60 @@ export default function CollabDashboard() {
           {activeTab === 'Overview' && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
-              {/* TOP LEFT: Shared Streak & Analytics */}
+              {/* TOP LEFT: Sync Streak & Live Challenge */}
               <div className="col-span-1 flex flex-col gap-6">
-                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-accent/50 transition-colors">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-coral/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-coral/20 transition-all"></div>
-                  <Flame size={48} className="text-coral mb-3 filter drop-shadow-[0_0_8px_rgba(255,107,107,0.5)] animate-pulse" />
-                  <h3 className="font-syne text-3xl font-bold text-text-primary">{activeStreak} Day</h3>
-                  <p className="text-[13px] text-text-3 mt-1 font-medium tracking-wide uppercase">Duo Streak Active</p>
-                  
-                  <div className="mt-5 w-full bg-surface-2 border border-border rounded-lg p-3">
-                    <div className="flex justify-between items-center text-[11px] mb-2">
-                      <span className="text-text-3">Weekly Goal</span>
-                      <span className="text-accent font-semibold">{completedTasksCount} / {weeklyGoalTotal} Tasks</span>
+                
+                {/* Sync Streak Slider */}
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-syne text-[15px] font-bold text-coral flex items-center gap-2">Sync Streak: {activeStreak}d</h3>
+                    <span className="text-[10px] font-bold bg-coral/10 text-coral px-2 py-1 rounded flex items-center gap-1"><Trophy size={12}/> MILESTONE! 🎉</span>
+                  </div>
+                  <div className="relative w-full h-2 bg-border rounded-full mt-4 flex items-center">
+                    <div className="absolute left-0 h-full bg-gradient-to-r from-blue to-coral rounded-full" style={{ width: '100%' }}></div>
+                    <div className="absolute -left-3 w-8 h-8 rounded-full bg-blue text-white border-4 border-surface flex items-center justify-center font-bold text-xs shadow-md z-10">R</div>
+                    <div className="absolute -right-3 w-8 h-8 rounded-full bg-coral text-white border-4 border-surface flex items-center justify-center font-bold text-xs shadow-md z-10">K</div>
+                    <div className="absolute w-6 h-6 bg-surface rounded-full flex items-center justify-center shadow-lg transform -translate-x-1/2 -translate-y-1/2 top-1/2 z-20 transition-all duration-1000" style={{ left: `${heartPosition}%` }}>
+                      <Heart className="text-coral" size={14} fill="currentColor" />
                     </div>
-                    <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
-                    </div>
+                  </div>
+                  <div className="flex justify-between mt-4 text-[10px] font-bold tracking-wider uppercase">
+                    <span className="text-blue">YOU</span>
+                    <span className="text-coral">BAE</span>
+                  </div>
+                  <div className="text-center text-[10px] font-bold text-text-3 tracking-widest uppercase mt-4">
+                    {Math.round(progressPercent)}% Synced Progress
                   </div>
                 </div>
 
-                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
-                   <h3 className="font-syne text-[15px] font-bold text-text-primary mb-4 flex items-center gap-2"><Target size={16} className="text-accent"/> Performance Analytics</h3>
-                   <div className="h-32 flex items-end gap-2 justify-between mt-2">
-                     {graphHeights.map((h, i) => (
-                       <div key={i} className="w-full bg-accent-dim rounded-t-sm relative group cursor-pointer hover:bg-accent transition-colors" style={{ height: h + "%" }}>
-                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface border border-border text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                           {taskCounts[i]} Tasks
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                   <div className="flex justify-between mt-2 text-[10px] text-text-3 font-medium px-1">
-                     <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                   </div>
+                {/* Live Challenge Battle */}
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                  <div className="text-coral font-bold flex items-center gap-1 text-[12px] tracking-widest uppercase mb-4">
+                    <Zap size={14} /> Live Challenge
+                  </div>
+                  <h3 className="font-syne text-xl font-bold text-text-primary mb-2">The "Mastery" Battle ⚔️</h3>
+                  <p className="text-[12px] text-text-3 leading-relaxed px-4 mb-6">
+                    First to reach 100% mastery in any New Folder wins a free Coffee Treat! ☕
+                    <br/><span className="text-accent font-semibold mt-2 inline-block">Winner gives a task/punishment to the loser on Sunday!</span>
+                  </p>
+
+                  <div className="flex items-center justify-center gap-6 w-full mb-6">
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-blue border-[4px] border-blue/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">R</div>
+                      <div className="font-syne text-3xl font-bold text-blue">{ruthvikPoints}</div>
+                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">YOU</div>
+                    </div>
+                    <div className="font-syne text-2xl font-bold text-coral/80">VS</div>
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-16 rounded-full bg-coral border-[4px] border-coral/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">K</div>
+                      <div className="font-syne text-3xl font-bold text-coral">{keerPoints}</div>
+                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">Babe</div>
+                    </div>
+                  </div>
+
+                  <button className="w-full py-3 rounded-xl bg-coral hover:bg-coral/90 text-white font-bold shadow-lg shadow-coral/30 transition-all flex items-center justify-center gap-2">
+                    Push harder! 🚀
+                  </button>
                 </div>
               </div>
 
@@ -523,7 +554,7 @@ export default function CollabDashboard() {
 
               {/* RIGHT: AI Course Analyzer */}
               <div className="col-span-1 flex flex-col gap-6">
-                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col h-full relative overflow-hidden">
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-40 h-40 bg-blue/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                   
                   <div className="flex items-center justify-between mb-4">
@@ -555,7 +586,7 @@ export default function CollabDashboard() {
                   </div>
 
                   {courseQuestions.length > 0 && (
-                    <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex flex-col overflow-hidden max-h-[300px]">
                       <h4 className="text-[11px] font-bold text-text-2 uppercase tracking-wider mb-3 flex items-center gap-1">
                         <Zap size={12} className="text-coral" /> Generated Quiz
                       </h4>
@@ -573,11 +604,40 @@ export default function CollabDashboard() {
                   )}
 
                   {courseQuestions.length === 0 && !isAnalyzing && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-50">
-                      <BookOpen size={32} className="text-text-3 mb-2" />
-                      <p className="text-[11px] text-text-3 max-w-[150px]">Awaiting material for analysis...</p>
+                    <div className="flex-col items-center justify-center text-center opacity-50 py-8">
+                      <BookOpen size={32} className="text-text-3 mb-2 mx-auto" />
+                      <p className="text-[11px] text-text-3 max-w-[150px] mx-auto">Awaiting material for analysis...</p>
                     </div>
                   )}
+                </div>
+
+                {/* Duo Activity Log */}
+                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col relative overflow-hidden flex-1">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-syne text-[15px] font-bold text-text-primary flex items-center gap-2">
+                      <Activity size={16} className="text-blue" /> Duo Activity
+                    </h3>
+                    <button className="text-[10px] font-bold text-blue tracking-wider uppercase hover:underline">View All</button>
+                  </div>
+                  
+                  <div className="flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1">
+                    {recentActivities.length > 0 ? recentActivities.map((act: any) => (
+                      <div key={act.id} className="bg-surface-2 border border-border rounded-xl p-3 flex items-center gap-4">
+                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-sm ${act.assignee === 'K' ? 'bg-coral' : act.assignee === 'R' ? 'bg-blue' : 'bg-gradient-to-r from-blue to-coral'}`}>
+                          {act.assignee === 'K' ? 'K' : act.assignee === 'R' ? 'R' : 'D'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-text-primary truncate">{act.title}</p>
+                          <p className="text-[10px] text-text-3 mt-0.5">{act.assignee === 'K' ? 'Babe' : act.assignee === 'R' ? 'You' : 'Both'} completed this task.</p>
+                        </div>
+                        <div className="text-green font-bold text-[13px] flex-shrink-0">
+                          +50
+                        </div>
+                      </div>
+                    )) : (
+                       <div className="text-center py-8 text-[12px] text-text-3">No recent activities. Get to work! 💪</div>
+                    )}
+                  </div>
                 </div>
               </div>
 
