@@ -153,24 +153,25 @@ export default function CollabDashboard() {
 
   const handleCreateTask = async () => {
     if (!newTaskTitle) return;
-    setIsSubmitting(true);
+    const title = newTaskTitle;
+    const assignee = newTaskAssignee;
+    const gift = newTaskGift;
+
+    setIsNewTaskModalOpen(false);
+    setNewTaskTitle("");
+    setNewTaskGift("");
+
     try {
       await addDoc(collection(db, 'collab_tasks'), {
-        title: newTaskTitle,
+        title: title,
         creator: activeUser?.avatar || "R",
-        assignee: newTaskAssignee,
+        assignee: assignee,
         completed: false,
-        gift: newTaskGift ? { text: newTaskGift, revealed: false } : null,
+        gift: gift ? { text: gift, revealed: false } : null,
         createdAt: Date.now()
       });
-      setIsNewTaskModalOpen(false);
-      setNewTaskTitle("");
-      setNewTaskGift("");
     } catch (e: any) {
       console.error(e);
-      alert("Error: " + e.message);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -185,22 +186,22 @@ export default function CollabDashboard() {
 
   const handleCreateVaultSession = async () => {
     if (!newPathTitle) return;
-    setIsSubmitting(true);
+    const title = newPathTitle;
+
+    setIsNewPathModalOpen(false);
+    setNewPathTitle("");
+
     try {
       const newDoc = await addDoc(collection(db, 'collab_vault_sessions'), {
-        title: newPathTitle,
+        title: title,
         progress: 0,
         topics: [],
         resources: [],
         createdAt: Date.now()
       });
       setActiveVaultSessionId(newDoc.id);
-      setIsNewPathModalOpen(false);
-      setNewPathTitle("");
     } catch (e: any) {
-      alert("Error: " + e.message);
-    } finally {
-      setIsSubmitting(false);
+      console.error(e);
     }
   };
 
@@ -222,7 +223,10 @@ export default function CollabDashboard() {
     if (!newTopicTitles.trim() || !activeVaultSessionId) return;
     const titles = newTopicTitles.split('\n').map(t => t.trim()).filter(t => t);
     if (titles.length === 0) return;
-    setIsSubmitting(true);
+    
+    setIsAddTopicModalOpen(false);
+    setNewTopicTitles("");
+
     try {
       const session = vaultSessions.find(s => s.id === activeVaultSessionId);
       if (!session) return;
@@ -232,35 +236,33 @@ export default function CollabDashboard() {
       });
       const progress = Math.round((newTopicsList.filter(t => t.completed).length / newTopicsList.length) * 100) || 0;
       await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { topics: newTopicsList, progress });
-      setIsAddTopicModalOpen(false);
-      setNewTopicTitles("");
     } catch (e: any) {
-      alert("Error: " + e.message);
-    } finally {
-      setIsSubmitting(false);
+      console.error(e);
     }
   };
 
   const handleAddResource = async () => {
     if (!newResourceTitle.trim() || !activeVaultSessionId) return;
-    setIsSubmitting(true);
+    const title = newResourceTitle;
+    const type = newResourceType;
+    const url = newResourceUrl;
+    
+    setIsAddResourceModalOpen(false);
+    setNewResourceTitle("");
+    setNewResourceUrl("");
+
     try {
       const session = vaultSessions.find(s => s.id === activeVaultSessionId);
       if (!session) return;
       const newResources = [...session.resources, {
         id: Date.now(),
-        title: newResourceTitle,
-        type: newResourceType,
-        url: newResourceUrl || "#"
+        title: title,
+        type: type,
+        url: url || "#"
       }];
       await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { resources: newResources });
-      setIsAddResourceModalOpen(false);
-      setNewResourceTitle("");
-      setNewResourceUrl("");
     } catch (e: any) {
-      alert("Error: " + e.message);
-    } finally {
-      setIsSubmitting(false);
+      console.error(e);
     }
   };
 
