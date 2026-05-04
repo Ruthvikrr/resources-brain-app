@@ -12,6 +12,18 @@ export default function CollabDashboard() {
   const [passwordInput, setPasswordInput] = useState("");
   const [loginError, setLoginError] = useState("");
   const [activeUser, setActiveUser] = useState<{id: number, name: string, role: string, avatar: string} | null>(null);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("collabActiveUser");
+    if (savedUser) {
+      try {
+        setActiveUser(JSON.parse(savedUser));
+        setIsAuthenticated(true);
+      } catch (e) {
+        console.error("Failed to parse saved session");
+      }
+    }
+  }, []);
   
   const [activeTab, setActiveTab] = useState("Overview");
   const [myMood, setMyMood] = useState("Focus Mode 🎯");
@@ -206,14 +218,18 @@ export default function CollabDashboard() {
   };
 
   const handleLogin = () => {
+    let user = null;
     if (usernameInput === "ruthvik" && passwordInput === "123456") {
-      setActiveUser({ id: 1, name: "Ruthvik", role: "Admin", avatar: "R" });
-      setIsAuthenticated(true);
-      setLoginError("");
+      user = { id: 1, name: "Ruthvik", role: "Admin", avatar: "R" };
     } else if (usernameInput === "keer" && passwordInput === "123456") {
-      setActiveUser({ id: 2, name: "Babe (Keer) ❤️", role: "Co-Pilot", avatar: "K" });
+      user = { id: 2, name: "Babe (Keer) ❤️", role: "Co-Pilot", avatar: "K" };
+    } 
+
+    if (user) {
+      setActiveUser(user);
       setIsAuthenticated(true);
       setLoginError("");
+      localStorage.setItem("collabActiveUser", JSON.stringify(user));
     } else {
       setLoginError("Invalid username or password");
     }
