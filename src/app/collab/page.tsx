@@ -45,6 +45,8 @@ export default function CollabDashboard() {
   const [newResourceType, setNewResourceType] = useState("link");
   const [newResourceUrl, setNewResourceUrl] = useState("");
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [arcadeStats, setArcadeStats] = useState({
     keer: { badges: 0, titles: [] as string[], loading: true },
     ruthvik: { badges: 0, titles: [] as string[], loading: true }
@@ -151,6 +153,7 @@ export default function CollabDashboard() {
 
   const handleCreateTask = async () => {
     if (!newTaskTitle) return;
+    setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'collab_tasks'), {
         title: newTaskTitle,
@@ -166,6 +169,8 @@ export default function CollabDashboard() {
     } catch (e: any) {
       console.error(e);
       alert("Error: " + e.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -180,16 +185,23 @@ export default function CollabDashboard() {
 
   const handleCreateVaultSession = async () => {
     if (!newPathTitle) return;
-    const newDoc = await addDoc(collection(db, 'collab_vault_sessions'), {
-      title: newPathTitle,
-      progress: 0,
-      topics: [],
-      resources: [],
-      createdAt: Date.now()
-    });
-    setActiveVaultSessionId(newDoc.id);
-    setIsNewPathModalOpen(false);
-    setNewPathTitle("");
+    setIsSubmitting(true);
+    try {
+      const newDoc = await addDoc(collection(db, 'collab_vault_sessions'), {
+        title: newPathTitle,
+        progress: 0,
+        topics: [],
+        resources: [],
+        createdAt: Date.now()
+      });
+      setActiveVaultSessionId(newDoc.id);
+      setIsNewPathModalOpen(false);
+      setNewPathTitle("");
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLogin = () => {
@@ -210,32 +222,46 @@ export default function CollabDashboard() {
     if (!newTopicTitles.trim() || !activeVaultSessionId) return;
     const titles = newTopicTitles.split('\n').map(t => t.trim()).filter(t => t);
     if (titles.length === 0) return;
-    const session = vaultSessions.find(s => s.id === activeVaultSessionId);
-    if (!session) return;
-    const newTopicsList = [...session.topics];
-    titles.forEach(t => {
-      newTopicsList.push({ id: Date.now() + Math.random(), title: t, completed: false });
-    });
-    const progress = Math.round((newTopicsList.filter(t => t.completed).length / newTopicsList.length) * 100) || 0;
-    await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { topics: newTopicsList, progress });
-    setIsAddTopicModalOpen(false);
-    setNewTopicTitles("");
+    setIsSubmitting(true);
+    try {
+      const session = vaultSessions.find(s => s.id === activeVaultSessionId);
+      if (!session) return;
+      const newTopicsList = [...session.topics];
+      titles.forEach(t => {
+        newTopicsList.push({ id: Date.now() + Math.random(), title: t, completed: false });
+      });
+      const progress = Math.round((newTopicsList.filter(t => t.completed).length / newTopicsList.length) * 100) || 0;
+      await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { topics: newTopicsList, progress });
+      setIsAddTopicModalOpen(false);
+      setNewTopicTitles("");
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddResource = async () => {
     if (!newResourceTitle.trim() || !activeVaultSessionId) return;
-    const session = vaultSessions.find(s => s.id === activeVaultSessionId);
-    if (!session) return;
-    const newResources = [...session.resources, {
-      id: Date.now(),
-      title: newResourceTitle,
-      type: newResourceType,
-      url: newResourceUrl || "#"
-    }];
-    await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { resources: newResources });
-    setIsAddResourceModalOpen(false);
-    setNewResourceTitle("");
-    setNewResourceUrl("");
+    setIsSubmitting(true);
+    try {
+      const session = vaultSessions.find(s => s.id === activeVaultSessionId);
+      if (!session) return;
+      const newResources = [...session.resources, {
+        id: Date.now(),
+        title: newResourceTitle,
+        type: newResourceType,
+        url: newResourceUrl || "#"
+      }];
+      await updateDoc(doc(db, 'collab_vault_sessions', activeVaultSessionId), { resources: newResources });
+      setIsAddResourceModalOpen(false);
+      setNewResourceTitle("");
+      setNewResourceUrl("");
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteTask = async (id: string) => {
@@ -1071,10 +1097,10 @@ export default function CollabDashboard() {
               <button onClick={() => setIsNewTaskModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
               <button 
                 onClick={handleCreateTask}
-                disabled={!newTaskTitle}
+                disabled={!newTaskTitle || isSubmitting}
                 className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
               >
-                Create Task
+                {isSubmitting ? "Saving..." : "Create Task"}
               </button>
             </div>
           </div>
@@ -1109,10 +1135,10 @@ export default function CollabDashboard() {
               <button onClick={() => setIsNewPathModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
               <button 
                 onClick={handleCreateVaultSession}
-                disabled={!newPathTitle}
+                disabled={!newPathTitle || isSubmitting}
                 className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
               >
-                Create Path
+                {isSubmitting ? "Creating..." : "Create Path"}
               </button>
             </div>
           </div>
@@ -1147,10 +1173,10 @@ export default function CollabDashboard() {
               <button onClick={() => setIsAddTopicModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
               <button 
                 onClick={handleAddTopics}
-                disabled={!newTopicTitles.trim()}
+                disabled={!newTopicTitles.trim() || isSubmitting}
                 className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
               >
-                Add Topics
+                {isSubmitting ? "Adding..." : "Add Topics"}
               </button>
             </div>
           </div>
@@ -1214,10 +1240,10 @@ export default function CollabDashboard() {
               <button onClick={() => setIsAddResourceModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
               <button 
                 onClick={handleAddResource}
-                disabled={!newResourceTitle.trim()}
+                disabled={!newResourceTitle.trim() || isSubmitting}
                 className="px-6 py-2 bg-blue text-white rounded-lg text-[13px] font-semibold hover:bg-blue/90 transition-colors disabled:opacity-50 shadow-sm"
               >
-                Save Resource
+                {isSubmitting ? "Saving..." : "Save Resource"}
               </button>
             </div>
           </div>
