@@ -516,10 +516,10 @@ export default function CollabDashboard() {
         {/* Dashboard Content */}
         <div className="p-6 md:p-8 flex-1 flex flex-col">
           {activeTab === 'Overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               
               {/* TOP LEFT: Sync Streak & Live Challenge */}
-              <div className="col-span-1 flex flex-col gap-6">
+              <div className="lg:col-span-1 flex flex-col gap-6">
                 
                 {/* Sync Streak Slider */}
                 <div className="bg-surface rounded-xl border border-border p-6 shadow-sm relative overflow-hidden group">
@@ -576,12 +576,26 @@ export default function CollabDashboard() {
               </div>
 
               {/* CENTER: Accountability Board (Task Engine) */}
-              <div className="col-span-1 md:col-span-1 lg:col-span-1">
+              <div className="lg:col-span-2">
                 {renderAccountabilityBoard()}
               </div>
 
-              {/* RIGHT: Activity Log */}
-              <div className="col-span-1 flex flex-col gap-6">
+              {/* RIGHT: Activity Log & Points */}
+              <div className="lg:col-span-1 flex flex-col gap-6">
+
+                {/* Standalone Points Banner */}
+                <div className="bg-surface rounded-xl border border-border p-5 shadow-sm relative overflow-hidden flex items-center justify-between group">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-accent/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none"></div>
+                  <div>
+                    <h3 className="text-[11px] font-bold text-text-3 uppercase tracking-wider mb-1">Total Pool</h3>
+                    <div className="font-syne text-2xl font-bold text-accent drop-shadow-sm">
+                      {ruthvikPoints + keerPoints} <span className="text-[14px] text-text-2 font-medium">pts</span>
+                    </div>
+                  </div>
+                  <div className="w-12 h-12 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent group-hover:scale-110 transition-transform shadow-inner">
+                    <Trophy size={22} className="drop-shadow-sm" />
+                  </div>
+                </div>
 
                 {/* Duo Activity Log */}
                 <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col relative overflow-hidden flex-1">
