@@ -621,42 +621,6 @@ export default function CollabDashboard() {
                   </button>
                 </div>
 
-                {/* Google Cloud Arcade Tracking */}
-                <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                  <div className="text-blue font-bold flex items-center gap-1 text-[12px] tracking-widest uppercase mb-4">
-                    <Globe size={14} /> Google Arcade
-                  </div>
-                  <h3 className="font-syne text-xl font-bold text-text-primary mb-2">Cloud Skills Boost ☁️</h3>
-                  <p className="text-[12px] text-text-3 leading-relaxed px-4 mb-6">
-                    Tracking public profile badges earned. Keep crushing those labs! 💻
-                  </p>
-
-                  <div className="flex items-center justify-center gap-6 w-full mb-6">
-                    <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-full bg-blue border-[4px] border-blue/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">R</div>
-                      <div className="font-syne text-3xl font-bold text-blue">
-                        {arcadeStats.ruthvik.loading ? '...' : arcadeStats.ruthvik.badges}
-                      </div>
-                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">
-                        {activeUser?.avatar === 'K' ? 'RUTHVIK' : 'YOU'}
-                      </div>
-                    </div>
-                    <div className="font-syne text-2xl font-bold text-border">VS</div>
-                    <div className="flex flex-col items-center">
-                      <div className="w-16 h-16 rounded-full bg-coral border-[4px] border-coral/20 shadow-lg flex items-center justify-center text-white font-bold text-xl mb-3">K</div>
-                      <div className="font-syne text-3xl font-bold text-coral">
-                        {arcadeStats.keer.loading ? '...' : arcadeStats.keer.badges}
-                      </div>
-                      <div className="text-[10px] font-bold text-text-3 tracking-widest uppercase mt-1">
-                        {activeUser?.avatar === 'K' ? 'YOU' : 'BABE'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button onClick={() => setActiveTab('Arcade')} className="w-full py-2.5 rounded-xl border border-border bg-surface-2 hover:bg-surface text-text-primary text-[12px] font-bold transition-all flex items-center justify-center gap-2">
-                    View All Badges 🏆
-                  </button>
-                </div>
 
               </div>
 
