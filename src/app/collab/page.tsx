@@ -88,17 +88,22 @@ export default function CollabDashboard() {
 
   const handleCreateTask = async () => {
     if (!newTaskTitle) return;
-    await addDoc(collection(db, 'collab_tasks'), {
-      title: newTaskTitle,
-      creator: activeUser?.avatar || "R",
-      assignee: newTaskAssignee,
-      completed: false,
-      gift: newTaskGift ? { text: newTaskGift, revealed: false } : null,
-      createdAt: Date.now()
-    });
-    setIsNewTaskModalOpen(false);
-    setNewTaskTitle("");
-    setNewTaskGift("");
+    try {
+      await addDoc(collection(db, 'collab_tasks'), {
+        title: newTaskTitle,
+        creator: activeUser?.avatar || "R",
+        assignee: newTaskAssignee,
+        completed: false,
+        gift: newTaskGift ? { text: newTaskGift, revealed: false } : null,
+        createdAt: Date.now()
+      });
+      setIsNewTaskModalOpen(false);
+      setNewTaskTitle("");
+      setNewTaskGift("");
+    } catch (e: any) {
+      console.error(e);
+      alert("Error: " + e.message);
+    }
   };
 
   const handleToggleTopic = async (sessionId: string, topicId: number) => {
@@ -194,6 +199,33 @@ export default function CollabDashboard() {
     const newResources = session.resources.filter((r: any) => r.id !== resourceId);
     await updateDoc(doc(db, 'collab_vault_sessions', sessionId), { resources: newResources });
   };
+
+  // --- REAL-TIME CALCULATIONS ---
+  const completedTasksCount = tasks.filter((t: any) => t.completed).length;
+  const totalTasksCount = tasks.length;
+  const weeklyGoalTotal = Math.max(20, Math.ceil(totalTasksCount / 10) * 10);
+  const progressPercent = totalTasksCount === 0 ? 0 : Math.round((completedTasksCount / weeklyGoalTotal) * 100);
+  const activeStreak = Math.floor(completedTasksCount / 3) + 1;
+
+  const getGraphData = () => {
+    const days = [0, 0, 0, 0, 0, 0, 0];
+    const getMappedDay = (dayIndex: number) => (dayIndex + 6) % 7; 
+    
+    tasks.forEach((t: any) => {
+      if (t.createdAt) {
+         const d = new Date(t.createdAt);
+         if (Date.now() - d.getTime() < 7 * 24 * 60 * 60 * 1000) {
+            days[getMappedDay(d.getDay())]++;
+         }
+      } else {
+         days[3]++; // Fallback for tasks created before tracking createdAt
+      }
+    });
+    return days;
+  };
+  const taskCounts = getGraphData();
+  const maxTasks = Math.max(...taskCounts, 5);
+  const graphHeights = taskCounts.map(count => Math.round((count / maxTasks) * 100));
 
   if (!isAuthenticated) {
     return (
@@ -453,16 +485,16 @@ export default function CollabDashboard() {
                 <div className="bg-surface rounded-xl border border-border p-6 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden group hover:border-accent/50 transition-colors">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-coral/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-coral/20 transition-all"></div>
                   <Flame size={48} className="text-coral mb-3 filter drop-shadow-[0_0_8px_rgba(255,107,107,0.5)] animate-pulse" />
-                  <h3 className="font-syne text-3xl font-bold text-text-primary">12 Day</h3>
+                  <h3 className="font-syne text-3xl font-bold text-text-primary">{activeStreak} Day</h3>
                   <p className="text-[13px] text-text-3 mt-1 font-medium tracking-wide uppercase">Duo Streak Active</p>
                   
                   <div className="mt-5 w-full bg-surface-2 border border-border rounded-lg p-3">
                     <div className="flex justify-between items-center text-[11px] mb-2">
                       <span className="text-text-3">Weekly Goal</span>
-                      <span className="text-accent font-semibold">14 / 20 Tasks</span>
+                      <span className="text-accent font-semibold">{completedTasksCount} / {weeklyGoalTotal} Tasks</span>
                     </div>
                     <div className="w-full h-1.5 bg-surface rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full" style={{ width: '70%' }}></div>
+                      <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
                     </div>
                   </div>
                 </div>
@@ -470,11 +502,10 @@ export default function CollabDashboard() {
                 <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
                    <h3 className="font-syne text-[15px] font-bold text-text-primary mb-4 flex items-center gap-2"><Target size={16} className="text-accent"/> Performance Analytics</h3>
                    <div className="h-32 flex items-end gap-2 justify-between mt-2">
-                     {/* Mock Chart */}
-                     {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+                     {graphHeights.map((h, i) => (
                        <div key={i} className="w-full bg-accent-dim rounded-t-sm relative group cursor-pointer hover:bg-accent transition-colors" style={{ height: h + "%" }}>
-                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface border border-border text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                           {h} Tasks
+                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-surface border border-border text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                           {taskCounts[i]} Tasks
                          </div>
                        </div>
                      ))}
