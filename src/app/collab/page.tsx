@@ -57,8 +57,8 @@ export default function CollabDashboard() {
   const [newResourceType, setNewResourceType] = useState("link");
   const [newResourceUrl, setNewResourceUrl] = useState("");
 
-  const [messages, setMessages] = useState<any[]>([]);
-  const [chatInput, setChatInput] = useState("");
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -128,11 +128,7 @@ export default function CollabDashboard() {
          setActiveAiSessionId(loadedSessions[0].id);
       }
     });
-    const unsubMessages = onSnapshot(collection(db, 'collab_messages'), (snapshot) => {
-      const loadedMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setMessages(loadedMessages.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0)));
-    });
-    return () => { unsubTasks(); unsubVault(); unsubAi(); unsubMessages(); };
+    return () => { unsubTasks(); unsubVault(); unsubAi(); };
   }, [isAuthenticated, activeVaultSessionId, activeAiSessionId]);
 
   const handleTickTask = async (id: string) => {
@@ -158,8 +154,8 @@ export default function CollabDashboard() {
       if (!data.success) throw new Error(data.error || "Failed to generate study materials");
 
       const generatedQuestions = [
-        ...data.data.mcqs.map((m: any) => ({ q: "(MCQ) " + m.q + " [" + m.options.join(", ") + "]", a: m.answer })),
-        ...data.data.qa.map((q: any) => ({ q: "(Q&A) " + q.q, a: q.a }))
+        ...data.data.mcqs.map((m: any) => ({ type: 'mcq', q: m.q, options: m.options, a: m.answer })),
+        ...data.data.qa.map((q: any) => ({ type: 'qa', q: q.q, a: q.a }))
       ];
       
       const newDoc = await addDoc(collection(db, 'collab_ai_sessions'), {
@@ -177,23 +173,14 @@ export default function CollabDashboard() {
     setIsAnalyzing(false);
   };
 
-  const handleSendMessage = async (text: string) => {
-    if (!text.trim() || !activeUser) return;
+  const handleDeleteAiSession = async (id: string) => {
+    if (!confirm("Delete this AI session?")) return;
     try {
-      await addDoc(collection(db, 'collab_messages'), {
-        text,
-        sender: activeUser.avatar,
-        createdAt: Date.now()
-      });
-      setChatInput("");
-    } catch (e) {
-      console.error(e);
+      await deleteDoc(doc(db, 'collab_ai_sessions', id));
+      if (activeAiSessionId === id) setActiveAiSessionId(null);
+    } catch (e: any) {
+      alert("Error deleting session: " + e.message);
     }
-  };
-
-  const handleSendQuestionToChat = async (questionText: string) => {
-    await handleSendMessage(`AI Quiz Question: ${questionText}`);
-    setActiveTab("Messages");
   };
 
   const handleCreateTask = async () => {
@@ -517,13 +504,7 @@ export default function CollabDashboard() {
                 Bento Workspace
               </div>
             </div>
-            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Messages' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Messages')}>
-              <div className="flex items-center gap-3">
-                <MessageSquare size={16} className={activeTab === 'Messages' ? 'text-accent-2' : ''} />
-                Live Messaging
-              </div>
-              <span className="bg-accent text-white text-[10px] px-1.5 py-0.5 rounded-full">3</span>
-            </div>
+
             <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Tasks' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Tasks')}>
               <div className="flex items-center gap-3">
                 <Briefcase size={16} className={activeTab === 'Tasks' ? 'text-accent-2' : ''} />
@@ -864,77 +845,7 @@ export default function CollabDashboard() {
             </div>
           )}
 
-          {activeTab === 'Messages' && (
-            <div className="bg-surface rounded-xl border border-border h-[600px] flex shadow-sm overflow-hidden">
-              <div className="w-1/3 border-r border-border flex flex-col">
-                <div className="p-4 border-b border-border">
-                  <input type="text" placeholder="Search chats..." className="w-full bg-surface-2 border border-border rounded-lg px-3 py-1.5 text-[13px] outline-none focus:border-accent" />
-                </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="p-4 border-b border-border bg-surface-2 cursor-pointer">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="font-semibold text-[13px] text-text-primary">Babe (Keer) ❤️</span>
-                      <span className="text-[10px] text-accent font-medium">Just now</span>
-                    </div>
-                    <p className="text-[12px] text-text-2 truncate">I answered the quiz on Server Components!</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col bg-bg">
-                <div className="p-4 border-b border-border bg-surface flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-coral/10 text-coral font-bold rounded-full flex items-center justify-center">K</div>
-                    <div>
-                      <div className="text-[13px] font-semibold text-text-primary">Babe (Keer) ❤️</div>
-                      <div className="text-[11px] text-green flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green rounded-full"></span> Researching 📚</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-text-3">
-                    <Settings size={16} className="cursor-pointer hover:text-accent" />
-                  </div>
-                </div>
-                <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 custom-scrollbar">
-                  <div className="self-center bg-surface border border-border rounded-full px-3 py-1 text-[10px] text-text-3 font-medium">Today</div>
-                  
-                  {messages.length > 0 ? messages.map((msg) => (
-                    <div key={msg.id} className={`flex gap-3 max-w-[80%] ${msg.sender === activeUser?.avatar ? 'self-end flex-row-reverse' : ''}`}>
-                      <div className={`w-6 h-6 rounded-full flex shrink-0 items-center justify-center text-xs font-bold ${msg.sender === activeUser?.avatar ? 'bg-accent text-white' : 'bg-surface-2 text-text-primary'}`}>
-                        {msg.sender}
-                      </div>
-                      <div className={`p-3 shadow-sm ${msg.sender === activeUser?.avatar ? 'bg-accent text-white rounded-2xl rounded-tr-sm' : 'bg-surface border border-border rounded-2xl rounded-tl-sm'}`}>
-                        <p className={`text-[13px] ${msg.sender === activeUser?.avatar ? 'text-white' : 'text-text-primary'}`}>{msg.text}</p>
-                        <span className={`text-[9px] mt-1 block ${msg.sender === activeUser?.avatar ? 'text-white/70 text-right' : 'text-text-3'}`}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="text-center text-text-3 text-[12px] my-auto">No messages yet. Say hi! 👋</div>
-                  )}
 
-                </div>
-                <div className="p-4 border-t border-border bg-surface">
-                  <div className="relative flex items-center">
-                    <input 
-                      type="text" 
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(chatInput)}
-                      placeholder="Type a message... (Live Socket Sync)" 
-                      className="w-full bg-surface-2 border border-border rounded-full py-2.5 pl-4 pr-12 text-[13px] outline-none focus:border-accent" 
-                    />
-                    <button 
-                      onClick={() => handleSendMessage(chatInput)}
-                      disabled={!chatInput.trim()}
-                      className="absolute right-2 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center hover:bg-accent-2 transition-colors disabled:opacity-50"
-                    >
-                      <Zap size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'AI Study Buddy' && (
             <div className="flex flex-1 gap-6 w-full max-w-[1200px] mx-auto h-[calc(100vh-140px)] min-h-[600px]">
@@ -948,12 +859,16 @@ export default function CollabDashboard() {
                   {aiSessions.length > 0 ? aiSessions.map((session: any) => (
                     <div 
                       key={session.id} 
-                      onClick={() => setActiveAiSessionId(session.id)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${activeAiSessionId === session.id ? 'bg-blue/10 border-blue' : 'bg-surface border-border hover:border-blue/50'}`}
+                      className={`p-3 rounded-lg border transition-all relative group/aisession ${activeAiSessionId === session.id ? 'bg-blue/10 border-blue' : 'bg-surface border-border hover:border-blue/50'}`}
                     >
-                      <h4 className={`font-semibold text-[13px] truncate ${activeAiSessionId === session.id ? 'text-blue' : 'text-text-primary'}`}>{session.title || 'Summary'}</h4>
-                      <div className="flex items-center justify-between mt-2 text-[10px]">
-                        <span className="text-text-3 font-medium bg-surface-2 px-1.5 py-0.5 rounded truncate max-w-[120px]">{session.link}</span>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteAiSession(session.id); }} className="absolute top-2 right-2 text-text-3 opacity-0 group-hover/aisession:opacity-100 hover:text-coral transition-all z-10 bg-surface rounded-md p-1 shadow-sm">
+                        <Trash2 size={12} />
+                      </button>
+                      <div onClick={() => setActiveAiSessionId(session.id)} className="cursor-pointer pr-5">
+                        <h4 className={`font-semibold text-[13px] truncate ${activeAiSessionId === session.id ? 'text-blue' : 'text-text-primary'}`}>{session.title || 'Summary'}</h4>
+                        <div className="flex items-center justify-between mt-2 text-[10px]">
+                          <span className="text-text-3 font-medium bg-surface-2 px-1.5 py-0.5 rounded truncate max-w-[120px]">{session.link}</span>
+                        </div>
                       </div>
                     </div>
                   )) : (
@@ -1002,14 +917,64 @@ export default function CollabDashboard() {
                         {session.questions && session.questions.length > 0 ? (
                            <div className="space-y-4">
                               <h4 className="font-bold text-[13px] text-text-2 uppercase tracking-wider mb-2">Generated Quiz Questions</h4>
-                              {session.questions.map((q: any, i: number) => (
-                                <div key={i} className="bg-surface border border-border rounded-xl p-4 group">
-                                  <p className="text-[14px] font-medium text-text-primary mb-3">Q: {q.q}</p>
-                                  <button onClick={() => handleSendQuestionToChat(q.q)} className="text-[11px] font-semibold text-blue bg-blue/10 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue/20 transition-colors w-max">
-                                    <MessageSquare size={12} /> Send to Live Chat
-                                  </button>
-                                </div>
-                              ))}
+                              {session.questions.map((q: any, i: number) => {
+                                const questionKey = `${session.id}-${i}`;
+                                return (
+                                  <div key={i} className="bg-surface border border-border rounded-xl p-5 shadow-sm group">
+                                    <p className="text-[14px] font-medium text-text-primary mb-4 flex gap-2">
+                                      <span className="text-blue font-bold">Q{i + 1}.</span> {q.q}
+                                    </p>
+                                    
+                                    {q.type === 'mcq' && q.options && (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        {q.options.map((opt: string, j: number) => {
+                                          const isSelected = selectedAnswers[questionKey] === opt;
+                                          const isCorrect = opt === q.a;
+                                          const showResult = !!selectedAnswers[questionKey];
+                                          let btnClass = "text-left px-4 py-2.5 rounded-lg border text-[13px] transition-colors ";
+                                          
+                                          if (showResult) {
+                                            if (isCorrect) btnClass += "bg-green/10 border-green text-green font-semibold";
+                                            else if (isSelected) btnClass += "bg-coral/10 border-coral text-coral font-semibold";
+                                            else btnClass += "bg-surface-2 border-border text-text-3 opacity-50";
+                                          } else {
+                                            btnClass += "bg-surface border-border hover:border-blue/50 hover:bg-blue/5 text-text-primary";
+                                          }
+
+                                          return (
+                                            <button 
+                                              key={j} 
+                                              disabled={showResult}
+                                              onClick={() => setSelectedAnswers(prev => ({...prev, [questionKey]: opt}))}
+                                              className={btnClass}
+                                            >
+                                              {opt}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {q.type === 'qa' && (
+                                      <div className="mt-4 border-t border-border/50 pt-4">
+                                        {!revealedAnswers[questionKey] ? (
+                                          <button 
+                                            onClick={() => setRevealedAnswers(prev => ({...prev, [questionKey]: true}))}
+                                            className="px-4 py-2 bg-surface-2 border border-border rounded-lg text-[12px] font-semibold hover:text-blue transition-colors"
+                                          >
+                                            Reveal Suggested Answer
+                                          </button>
+                                        ) : (
+                                          <div className="bg-blue/5 border border-blue/20 rounded-lg p-4 text-[13px] text-text-primary">
+                                            <span className="font-bold text-blue block mb-1">Answer:</span>
+                                            {q.a}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                            </div>
                         ) : (
                            <p className="text-[13px] text-text-3 italic">No questions generated.</p>
