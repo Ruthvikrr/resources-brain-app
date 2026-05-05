@@ -132,7 +132,7 @@ export default function CollabDashboard() {
     return () => { unsubTasks(); unsubVault(); unsubAi(); };
   }, [isAuthenticated, activeVaultSessionId, activeAiSessionId]);
 
-  const handleTickTask = async (id: string) => {
+  const handleTickTask = async (id: string, targetAvatar?: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task || !activeUser) return;
 
@@ -145,12 +145,18 @@ export default function CollabDashboard() {
       return;
     }
 
+    if (targetAvatar && activeUser.avatar !== targetAvatar) {
+      alert(`Only ${targetAvatar === 'R' ? 'Ruthvik' : 'Keer'} can check off this circle.`);
+      return;
+    }
+
     if (task.assignee === 'Both') {
+      const userToToggle = targetAvatar || activeUser.avatar;
       let completedBy = task.completedBy || [];
-      if (completedBy.includes(activeUser.avatar)) {
-        completedBy = completedBy.filter((u: string) => u !== activeUser.avatar);
+      if (completedBy.includes(userToToggle)) {
+        completedBy = completedBy.filter((u: string) => u !== userToToggle);
       } else {
-        completedBy = [...completedBy, activeUser.avatar];
+        completedBy = [...completedBy, userToToggle];
       }
       const isFullyCompleted = completedBy.includes('R') && completedBy.includes('K');
       const gift = task.gift ? { ...task.gift, revealed: isFullyCompleted } : null;
@@ -491,9 +497,22 @@ export default function CollabDashboard() {
                   <Trash2 size={16} />
                 </button>
               </div>
-              <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
-                {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
-              </button>
+              {task.assignee === 'Both' ? (
+                <div className="mt-0.5 flex-shrink-0 flex gap-2">
+                  <button onClick={() => handleTickTask(task.id, 'R')} className="relative text-text-3 hover:text-blue transition-colors group/btn" title="Ruthvik's Tick">
+                    {task.completedBy?.includes('R') ? <CheckCircle size={18} className="text-blue" /> : <Circle size={18} className="text-blue/40 group-hover/btn:text-blue" />}
+                    <span className="absolute -top-3 -left-1 text-[9px] font-bold text-blue opacity-80">R</span>
+                  </button>
+                  <button onClick={() => handleTickTask(task.id, 'K')} className="relative text-text-3 hover:text-coral transition-colors group/btn" title="Keer's Tick">
+                    {task.completedBy?.includes('K') ? <CheckCircle size={18} className="text-coral" /> : <Circle size={18} className="text-coral/40 group-hover/btn:text-coral" />}
+                    <span className="absolute -top-3 left-1.5 text-[9px] font-bold text-coral opacity-80">K</span>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
+                  {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
+                </button>
+              )}
               <div className="flex-1 min-w-0">
                 <p className={"text-[13px] font-medium truncate " + (task.completed ? 'line-through text-text-3' : 'text-text-primary')}>
                   {task.title}
