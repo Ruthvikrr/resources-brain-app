@@ -57,6 +57,9 @@ export default function CollabDashboard() {
   const [newResourceType, setNewResourceType] = useState("link");
   const [newResourceUrl, setNewResourceUrl] = useState("");
 
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [arcadeStats, setArcadeStats] = useState({
@@ -125,7 +128,11 @@ export default function CollabDashboard() {
          setActiveAiSessionId(loadedSessions[0].id);
       }
     });
-    return () => { unsubTasks(); unsubVault(); unsubAi(); };
+    const unsubMessages = onSnapshot(collection(db, 'collab_messages'), (snapshot) => {
+      const loadedMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setMessages(loadedMessages.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0)));
+    });
+    return () => { unsubTasks(); unsubVault(); unsubAi(); unsubMessages(); };
   }, [isAuthenticated, activeVaultSessionId, activeAiSessionId]);
 
   const handleTickTask = async (id: string) => {
@@ -140,17 +147,24 @@ export default function CollabDashboard() {
     if (!courseUrl) return;
     setIsAnalyzing(true);
     
-    // Simulate API Call for generated quiz
-    const generatedQuestions = [
-      { q: "What are the core concepts mentioned in this link?", a: "" },
-      { q: "How can this knowledge be applied practically?", a: "" },
-      { q: "What is the most surprising fact from this content?", a: "" },
-    ];
-    
     try {
+      const response = await fetch('/api/study-buddy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: courseUrl })
+      });
+      
+      const data = await response.json();
+      if (!data.success) throw new Error(data.error || "Failed to generate study materials");
+
+      const generatedQuestions = [
+        ...data.data.mcqs.map((m: any) => ({ q: "(MCQ) " + m.q + " [" + m.options.join(", ") + "]", a: m.answer })),
+        ...data.data.qa.map((q: any) => ({ q: "(Q&A) " + q.q, a: q.a }))
+      ];
+      
       const newDoc = await addDoc(collection(db, 'collab_ai_sessions'), {
         link: courseUrl,
-        title: courseUrl.replace(/^https?:\/\//, '').split('/')[0] + ' Summary',
+        title: data.data.title || (courseUrl.replace(/^https?:\/\//, '').split('/')[0] + ' Summary'),
         questions: generatedQuestions,
         createdAt: Date.now(),
         creator: activeUser?.avatar || "R"
@@ -161,6 +175,25 @@ export default function CollabDashboard() {
       alert("Error saving AI session: " + e.message);
     }
     setIsAnalyzing(false);
+  };
+
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim() || !activeUser) return;
+    try {
+      await addDoc(collection(db, 'collab_messages'), {
+        text,
+        sender: activeUser.avatar,
+        createdAt: Date.now()
+      });
+      setChatInput("");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSendQuestionToChat = async (questionText: string) => {
+    await handleSendMessage(`AI Quiz Question: ${questionText}`);
+    setActiveTab("Messages");
   };
 
   const handleCreateTask = async () => {
@@ -862,25 +895,39 @@ export default function CollabDashboard() {
                 </div>
                 <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 custom-scrollbar">
                   <div className="self-center bg-surface border border-border rounded-full px-3 py-1 text-[10px] text-text-3 font-medium">Today</div>
-                  <div className="flex gap-3 max-w-[80%]">
-                    <div className="w-6 h-6 rounded-full bg-surface-2 flex shrink-0 items-center justify-center text-xs font-bold">K</div>
-                    <div className="bg-surface border border-border rounded-2xl rounded-tl-sm p-3 shadow-sm">
-                      <p className="text-[13px] text-text-primary">I answered the quiz on Server Components! They render on the server to reduce client bundle size.</p>
-                      <span className="text-[9px] text-text-3 mt-1 block">10:42 AM</span>
+                  
+                  {messages.length > 0 ? messages.map((msg) => (
+                    <div key={msg.id} className={`flex gap-3 max-w-[80%] ${msg.sender === activeUser?.avatar ? 'self-end flex-row-reverse' : ''}`}>
+                      <div className={`w-6 h-6 rounded-full flex shrink-0 items-center justify-center text-xs font-bold ${msg.sender === activeUser?.avatar ? 'bg-accent text-white' : 'bg-surface-2 text-text-primary'}`}>
+                        {msg.sender}
+                      </div>
+                      <div className={`p-3 shadow-sm ${msg.sender === activeUser?.avatar ? 'bg-accent text-white rounded-2xl rounded-tr-sm' : 'bg-surface border border-border rounded-2xl rounded-tl-sm'}`}>
+                        <p className={`text-[13px] ${msg.sender === activeUser?.avatar ? 'text-white' : 'text-text-primary'}`}>{msg.text}</p>
+                        <span className={`text-[9px] mt-1 block ${msg.sender === activeUser?.avatar ? 'text-white/70 text-right' : 'text-text-3'}`}>
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex gap-3 max-w-[80%] self-end flex-row-reverse">
-                    <div className="w-6 h-6 rounded-full bg-accent text-white flex shrink-0 items-center justify-center text-xs font-bold">R</div>
-                    <div className="bg-accent text-white rounded-2xl rounded-tr-sm p-3 shadow-sm">
-                      <p className="text-[13px]">Spot on! Ticking off your task now so you can get the mystery gift 👀</p>
-                      <span className="text-[9px] text-white/70 mt-1 block text-right">10:45 AM</span>
-                    </div>
-                  </div>
+                  )) : (
+                    <div className="text-center text-text-3 text-[12px] my-auto">No messages yet. Say hi! 👋</div>
+                  )}
+
                 </div>
                 <div className="p-4 border-t border-border bg-surface">
                   <div className="relative flex items-center">
-                    <input type="text" placeholder="Type a message... (Live Socket Sync)" className="w-full bg-surface-2 border border-border rounded-full py-2.5 pl-4 pr-12 text-[13px] outline-none focus:border-accent" />
-                    <button className="absolute right-2 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center hover:bg-accent-2 transition-colors">
+                    <input 
+                      type="text" 
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage(chatInput)}
+                      placeholder="Type a message... (Live Socket Sync)" 
+                      className="w-full bg-surface-2 border border-border rounded-full py-2.5 pl-4 pr-12 text-[13px] outline-none focus:border-accent" 
+                    />
+                    <button 
+                      onClick={() => handleSendMessage(chatInput)}
+                      disabled={!chatInput.trim()}
+                      className="absolute right-2 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center hover:bg-accent-2 transition-colors disabled:opacity-50"
+                    >
                       <Zap size={14} />
                     </button>
                   </div>
@@ -958,7 +1005,7 @@ export default function CollabDashboard() {
                               {session.questions.map((q: any, i: number) => (
                                 <div key={i} className="bg-surface border border-border rounded-xl p-4 group">
                                   <p className="text-[14px] font-medium text-text-primary mb-3">Q: {q.q}</p>
-                                  <button className="text-[11px] font-semibold text-blue bg-blue/10 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue/20 transition-colors w-max">
+                                  <button onClick={() => handleSendQuestionToChat(q.q)} className="text-[11px] font-semibold text-blue bg-blue/10 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-blue/20 transition-colors w-max">
                                     <MessageSquare size={12} /> Send to Live Chat
                                   </button>
                                 </div>
