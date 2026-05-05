@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2, HeartHandshake, Heart, Trophy } from "lucide-react";
+import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2, HeartHandshake, Heart, Trophy, Edit2 } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
@@ -38,6 +38,7 @@ export default function CollabDashboard() {
 
   // Modal State for Tasks
   const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("Both");
   const [newTaskGift, setNewTaskGift] = useState("");
@@ -133,10 +134,32 @@ export default function CollabDashboard() {
 
   const handleTickTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);
-    if (!task) return;
-    const completed = !task.completed;
-    const gift = task.gift ? { ...task.gift, revealed: completed } : null;
-    await updateDoc(doc(db, 'collab_tasks', id), { completed, gift });
+    if (!task || !activeUser) return;
+
+    if (task.assignee === 'R' && activeUser.avatar !== 'R') {
+      alert("Only Ruthvik can complete this task.");
+      return;
+    }
+    if (task.assignee === 'K' && activeUser.avatar !== 'K') {
+      alert("Only Keer can complete this task.");
+      return;
+    }
+
+    if (task.assignee === 'Both') {
+      let completedBy = task.completedBy || [];
+      if (completedBy.includes(activeUser.avatar)) {
+        completedBy = completedBy.filter((u: string) => u !== activeUser.avatar);
+      } else {
+        completedBy = [...completedBy, activeUser.avatar];
+      }
+      const isFullyCompleted = completedBy.includes('R') && completedBy.includes('K');
+      const gift = task.gift ? { ...task.gift, revealed: isFullyCompleted } : null;
+      await updateDoc(doc(db, 'collab_tasks', id), { completed: isFullyCompleted, completedBy, gift });
+    } else {
+      const completed = !task.completed;
+      const gift = task.gift ? { ...task.gift, revealed: completed } : null;
+      await updateDoc(doc(db, 'collab_tasks', id), { completed, gift });
+    }
   };
 
   const analyzeCourse = async () => {
@@ -192,19 +215,38 @@ export default function CollabDashboard() {
     setIsNewTaskModalOpen(false);
     setNewTaskTitle("");
     setNewTaskGift("");
+    const currentEditId = editingTaskId;
+    setEditingTaskId(null);
 
     try {
-      await addDoc(collection(db, 'collab_tasks'), {
-        title: title,
-        creator: activeUser?.avatar || "R",
-        assignee: assignee,
-        completed: false,
-        gift: gift ? { text: gift, revealed: false } : null,
-        createdAt: Date.now()
-      });
+      if (currentEditId) {
+        await updateDoc(doc(db, 'collab_tasks', currentEditId), {
+          title: title,
+          assignee: assignee,
+          gift: gift ? { text: gift, revealed: false } : null
+        });
+      } else {
+        await addDoc(collection(db, 'collab_tasks'), {
+          title: title,
+          creator: activeUser?.avatar || "R",
+          assignee: assignee,
+          completed: false,
+          completedBy: [],
+          gift: gift ? { text: gift, revealed: false } : null,
+          createdAt: Date.now()
+        });
+      }
     } catch (e: any) {
       console.error(e);
     }
+  };
+
+  const openEditTaskModal = (task: any) => {
+    setNewTaskTitle(task.title);
+    setNewTaskAssignee(task.assignee);
+    setNewTaskGift(task.gift ? task.gift.text : "");
+    setEditingTaskId(task.id);
+    setIsNewTaskModalOpen(true);
   };
 
   const handleToggleTopic = async (sessionId: string, topicId: number) => {
@@ -441,9 +483,14 @@ export default function CollabDashboard() {
         {tasks.map((task: any) => (
           <div key={task.id} className={"p-3 rounded-lg border transition-all " + (task.completed ? 'bg-surface-2/50 border-border opacity-60' : 'bg-surface-2 border-border hover:border-accent/50')}>
             <div className="flex items-start gap-3 group/task">
-              <button onClick={() => handleDeleteTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 opacity-0 group-hover/task:opacity-100 hover:text-coral transition-all">
-                <Trash2 size={16} />
-              </button>
+              <div className="mt-0.5 flex-shrink-0 flex gap-2 opacity-0 group-hover/task:opacity-100 transition-all">
+                <button onClick={() => openEditTaskModal(task)} className="text-text-3 hover:text-blue transition-all">
+                  <Edit2 size={16} />
+                </button>
+                <button onClick={() => handleDeleteTask(task.id)} className="text-text-3 hover:text-coral transition-all">
+                  <Trash2 size={16} />
+                </button>
+              </div>
               <button onClick={() => handleTickTask(task.id)} className="mt-0.5 flex-shrink-0 text-text-3 hover:text-green transition-colors">
                 {task.completed ? <CheckCircle size={16} className="text-green" /> : <Circle size={16} />}
               </button>
@@ -1068,8 +1115,8 @@ export default function CollabDashboard() {
         <div className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface-2/50">
-              <h3 className="font-syne text-lg font-bold text-text-primary">Create Shared Task</h3>
-              <button onClick={() => setIsNewTaskModalOpen(false)} className="text-text-3 hover:text-text-primary transition-colors">
+              <h3 className="font-syne text-lg font-bold text-text-primary">{editingTaskId ? "Edit Shared Task" : "Create Shared Task"}</h3>
+              <button onClick={() => { setIsNewTaskModalOpen(false); setEditingTaskId(null); }} className="text-text-3 hover:text-text-primary transition-colors">
                 <X size={20} />
               </button>
             </div>
@@ -1124,13 +1171,13 @@ export default function CollabDashboard() {
             </div>
 
             <div className="p-4 border-t border-border bg-surface-2/50 flex justify-end gap-3">
-              <button onClick={() => setIsNewTaskModalOpen(false)} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
+              <button onClick={() => { setIsNewTaskModalOpen(false); setEditingTaskId(null); }} className="px-4 py-2 text-[13px] font-semibold text-text-3 hover:text-text-primary transition-colors">Cancel</button>
               <button 
                 onClick={handleCreateTask}
                 disabled={!newTaskTitle || isSubmitting}
                 className="px-6 py-2 bg-accent text-white rounded-lg text-[13px] font-semibold hover:bg-accent-2 transition-colors disabled:opacity-50 shadow-sm"
               >
-                {isSubmitting ? "Saving..." : "Create Task"}
+                {isSubmitting ? "Saving..." : (editingTaskId ? "Save Changes" : "Create Task")}
               </button>
             </div>
           </div>
