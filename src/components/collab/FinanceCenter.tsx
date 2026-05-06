@@ -76,21 +76,21 @@ export default function FinanceCenter({ activeUser }: { activeUser: any }) {
             <Coins size={14} /> Shared Available Balance
           </h2>
           <div className="font-syne text-5xl font-bold text-text-primary mb-6">
-            ${availableBalance.toLocaleString()}
+            ₹{availableBalance.toLocaleString()}
           </div>
           
           <div className="flex gap-6">
             <div className="flex flex-col">
               <span className="text-[10px] text-text-3 uppercase tracking-wider mb-1 flex items-center gap-1"><ArrowUpRight size={10} className="text-green"/> Total Income</span>
-              <span className="text-green font-bold">${totalIncome.toLocaleString()}</span>
+              <span className="text-green font-bold">₹{totalIncome.toLocaleString()}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] text-text-3 uppercase tracking-wider mb-1 flex items-center gap-1"><ArrowDownRight size={10} className="text-coral"/> Total Expenses</span>
-              <span className="text-coral font-bold">${totalExpense.toLocaleString()}</span>
+              <span className="text-coral font-bold">₹{totalExpense.toLocaleString()}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] text-text-3 uppercase tracking-wider mb-1 flex items-center gap-1"><Target size={10} className="text-blue"/> In Jars</span>
-              <span className="text-blue font-bold">${jarSavings.toLocaleString()}</span>
+              <span className="text-blue font-bold">₹{jarSavings.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function FinanceCenter({ activeUser }: { activeUser: any }) {
                 <button onClick={() => setTxType('income')} className={`flex-1 py-1.5 text-[11px] font-bold rounded ${txType === 'income' ? 'bg-green text-white' : 'bg-surface border border-border'}`}>Income</button>
               </div>
               <input type="text" placeholder="Description (e.g. Groceries)" value={txDesc} onChange={e=>setTxDesc(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-[12px] outline-none" />
-              <input type="number" placeholder="Amount ($)" value={txAmount} onChange={e=>setTxAmount(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-[12px] outline-none" />
+              <input type="number" placeholder="Amount (₹)" value={txAmount} onChange={e=>setTxAmount(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-[12px] outline-none" />
               <div className="flex gap-2">
                 <button onClick={handleAddTx} className="flex-1 bg-accent text-white text-[11px] font-bold py-2 rounded">Save</button>
                 <button onClick={() => setIsAddingTx(false)} className="flex-1 bg-surface border border-border text-text-2 text-[11px] font-bold py-2 rounded">Cancel</button>
@@ -136,7 +136,7 @@ export default function FinanceCenter({ activeUser }: { activeUser: any }) {
                   </div>
                 </div>
                 <div className={`font-syne font-bold ${tx.type === 'income' ? 'text-green' : 'text-text-primary'}`}>
-                  {tx.type === 'income' ? '+' : '-'}${tx.amount.toLocaleString()}
+                  {tx.type === 'income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
                 </div>
               </div>
             ))}
@@ -158,7 +158,7 @@ export default function FinanceCenter({ activeUser }: { activeUser: any }) {
           {isAddingJar && (
             <div className="mb-4 bg-surface-2 p-3 rounded-lg border border-border space-y-3">
               <input type="text" placeholder="Goal Name (e.g. Europe Trip)" value={jarName} onChange={e=>setJarName(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-[12px] outline-none" />
-              <input type="number" placeholder="Target Amount ($)" value={jarTarget} onChange={e=>setJarTarget(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-[12px] outline-none" />
+              <input type="number" placeholder="Target Amount (₹)" value={jarTarget} onChange={e=>setJarTarget(e.target.value)} className="w-full bg-surface border border-border rounded px-3 py-2 text-[12px] outline-none" />
               <div className="flex gap-2">
                 <button onClick={handleAddJar} className="flex-1 bg-blue text-white text-[11px] font-bold py-2 rounded">Create Jar</button>
                 <button onClick={() => setIsAddingJar(false)} className="flex-1 bg-surface border border-border text-text-2 text-[11px] font-bold py-2 rounded">Cancel</button>
@@ -180,8 +180,8 @@ export default function FinanceCenter({ activeUser }: { activeUser: any }) {
                   />
                   <div className="relative z-10 flex flex-col items-center text-center gap-2">
                     <span className="text-[12px] font-bold text-text-primary line-clamp-1">{jar.name}</span>
-                    <div className="font-syne text-xl font-bold text-blue">${jar.current.toLocaleString()}</div>
-                    <div className="text-[10px] text-text-3 font-medium">of ${jar.target.toLocaleString()}</div>
+                    <div className="font-syne text-xl font-bold text-blue">₹{jar.current.toLocaleString()}</div>
+                    <div className="text-[10px] text-text-3 font-medium">of ₹{jar.target.toLocaleString()}</div>
                     <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden mt-1">
                       <div className="h-full bg-blue rounded-full" style={{ width: `${progress}%` }}></div>
                     </div>
