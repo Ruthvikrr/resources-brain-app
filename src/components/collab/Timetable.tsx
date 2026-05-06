@@ -120,78 +120,100 @@ export default function Timetable({ activeUser }: { activeUser: any }) {
             <span className="text-[12px] font-bold text-text-3 tracking-widest uppercase">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
           </div>
 
-          <div className="relative border-l-2 border-border ml-4 space-y-8 pb-10">
-            {todaysTasks.map(task => {
-              const isCompleted = task.completedDates?.includes(todayStr);
-              
-              // Calculate remaining days
-              const diff = getDaysDiff(task.startDate, todayStr);
-              const daysLeft = task.daysCount - diff;
-
-              return (
-                <div key={task.id} className="relative pl-8 group">
-                  {/* Timeline dot */}
-                  <div className={`absolute -left-[11px] top-1 w-5 h-5 rounded-full border-4 border-bg flex items-center justify-center transition-colors ${isCompleted ? 'bg-green' : 'bg-blue'}`}>
-                    {isCompleted && <div className="w-2 h-2 bg-bg rounded-full"></div>}
-                  </div>
-
-                  <div className={`bg-surface border ${isCompleted ? 'border-green/30 bg-green/5' : 'border-border'} rounded-xl p-5 shadow-sm transition-all hover:shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm mb-10">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-surface-2/50 border-b border-border text-[11px] font-bold text-text-2 uppercase tracking-wider">
+                  <th className="p-4 font-syne">Time Block</th>
+                  <th className="p-4 font-syne">Task / Goal</th>
+                  <th className="p-4 font-syne">Progress</th>
+                  <th className="p-4 font-syne text-center">Status</th>
+                  <th className="p-4 font-syne text-center w-10"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {todaysTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-text-3 text-[14px]">Your schedule is clear for today. Add a new routine block to get started!</td>
+                  </tr>
+                ) : (
+                  todaysTasks.map(task => {
+                    const isCompleted = task.completedDates?.includes(todayStr);
+                    const diff = getDaysDiff(task.startDate, todayStr);
                     
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-[12px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isCompleted ? 'text-green' : 'text-blue'}`}>
-                          <Clock size={14} /> {task.startTime} - {task.endTime}
-                        </span>
-                        <span className="text-[10px] text-text-3 font-medium bg-surface-2 px-2 py-0.5 rounded-full border border-border">Day {diff + 1} of {task.daysCount}</span>
-                      </div>
-                      <h4 className={`font-syne text-[16px] font-bold ${isCompleted ? 'text-text-3 line-through' : 'text-text-primary'}`}>
-                        {task.title}
-                      </h4>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <button 
-                        onClick={() => toggleTaskForToday(task.id, task.completedDates || [])}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isCompleted ? 'bg-green text-white shadow-lg shadow-green/20' : 'bg-surface-2 border border-border text-text-3 hover:text-blue hover:border-blue'}`}
-                      >
-                        {isCompleted ? <CheckCircle size={20} /> : <Circle size={20} />}
-                      </button>
-                      
-                      <button onClick={async () => {
-                        if(confirm('Delete this routine completely?')) {
-                          await deleteDoc(doc(db, 'collab_timetable', task.id));
-                        }
-                      }} className="text-text-3 hover:text-coral opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Trash2 size={16}/>
-                      </button>
-                    </div>
-
-                  </div>
-                </div>
-              )
-            })}
-
-            {todaysTasks.length === 0 && (
-              <div className="pl-8 py-10 text-text-3 text-[14px]">Your schedule is clear for today. Add a new routine block to get started!</div>
-            )}
+                    return (
+                      <tr key={task.id} className={`group transition-colors ${isCompleted ? 'bg-green/5' : 'hover:bg-surface-2'}`}>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className={`text-[12px] font-bold flex items-center gap-1.5 ${isCompleted ? 'text-green' : 'text-blue'}`}>
+                            <Clock size={14} /> {task.startTime} - {task.endTime}
+                          </span>
+                        </td>
+                        <td className="p-4 w-full">
+                          <h4 className={`font-syne text-[15px] font-bold ${isCompleted ? 'text-text-3 line-through' : 'text-text-primary'}`}>
+                            {task.title}
+                          </h4>
+                        </td>
+                        <td className="p-4 whitespace-nowrap">
+                          <span className="text-[10px] text-text-3 font-medium bg-surface-2 px-2.5 py-1 rounded-full border border-border">Day {diff + 1} of {task.daysCount}</span>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button 
+                            onClick={() => toggleTaskForToday(task.id, task.completedDates || [])}
+                            className={`mx-auto w-9 h-9 rounded-full flex items-center justify-center transition-all ${isCompleted ? 'bg-green text-white shadow-lg shadow-green/20 scale-110' : 'bg-surface-2 border border-border text-text-3 hover:text-blue hover:border-blue'}`}
+                          >
+                            {isCompleted ? <CheckCircle size={18} /> : <Circle size={18} />}
+                          </button>
+                        </td>
+                        <td className="p-4 text-center">
+                          <button onClick={async () => {
+                            if(confirm('Delete this routine completely?')) {
+                              await deleteDoc(doc(db, 'collab_timetable', task.id));
+                            }
+                          }} className="text-text-3 hover:text-coral opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Trash2 size={16}/>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
 
           <div className="mt-12 pt-8 border-t border-border">
             <h3 className="font-syne text-[15px] font-bold text-text-3 mb-4">All Active Routines</h3>
-            <div className="space-y-2">
-              {tasks.filter(t => {
-                if (!t.startDate) return false;
-                return getDaysDiff(t.startDate, todayStr) < t.daysCount;
-              }).map(t => (
-                <div key={t.id} className="flex items-center justify-between bg-surface-2 rounded-lg px-4 py-3 border border-border text-[12px]">
-                  <span className="font-bold text-text-primary">{t.title}</span>
-                  <div className="flex items-center gap-4 text-text-3 font-medium">
-                    <span>{t.startTime} - {t.endTime}</span>
-                    <span className="w-16 text-right">{t.daysCount} Days</span>
-                  </div>
-                </div>
-              ))}
-              {tasks.length === 0 && <div className="text-[12px] text-text-3">No active routines.</div>}
+            <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-surface-2/50 border-b border-border text-[10px] font-bold text-text-3 uppercase tracking-wider">
+                    <th className="p-3 font-syne">Routine Title</th>
+                    <th className="p-3 font-syne">Daily Time</th>
+                    <th className="p-3 font-syne text-right">Duration</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {tasks.filter(t => t.startDate && getDaysDiff(t.startDate, todayStr) < t.daysCount).length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="p-4 text-[12px] text-text-3 text-center">No active routines.</td>
+                    </tr>
+                  ) : (
+                    tasks.filter(t => t.startDate && getDaysDiff(t.startDate, todayStr) < t.daysCount).map(t => (
+                      <tr key={t.id} className="hover:bg-surface-2 transition-colors">
+                        <td className="p-3">
+                          <span className="font-bold text-[13px] text-text-primary">{t.title}</span>
+                        </td>
+                        <td className="p-3 whitespace-nowrap">
+                          <span className="text-[12px] text-text-3 font-medium flex items-center gap-1.5"><Clock size={12}/> {t.startTime} - {t.endTime}</span>
+                        </td>
+                        <td className="p-3 whitespace-nowrap text-right">
+                          <span className="text-[11px] font-bold text-text-2 bg-surface-2 border border-border px-2 py-0.5 rounded-full">{t.daysCount} Days</span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
