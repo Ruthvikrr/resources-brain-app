@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import { LayoutGrid, MessageSquare, Briefcase, Activity, Settings, Bell, Search, Globe, Shield, Flame, CheckCircle, Circle, Gift, BookOpen, Lock, Unlock, Brain, Target, Coffee, Zap, X, Library, FileText, Link as LinkIcon, Plus, Trash2, HeartHandshake, Heart, Trophy, Edit2 } from "lucide-react";
 import Link from "next/link";
 import { db } from "@/lib/firebase";
+import CoursesHub from "@/components/collab/CoursesHub";
+import FinanceCenter from "@/components/collab/FinanceCenter";
+import AptitudeVault from "@/components/collab/AptitudeVault";
+import AILearningVault from "@/components/collab/AILearningVault";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 export default function CollabDashboard() {
@@ -589,6 +593,30 @@ export default function CollabDashboard() {
                 AI Study Buddy
               </div>
             </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Duo Hub' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Duo Hub')}>
+              <div className="flex items-center gap-3">
+                <Target size={16} className={activeTab === 'Duo Hub' ? 'text-accent-2' : ''} />
+                Duo Hub (Courses)
+              </div>
+            </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Finance' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Finance')}>
+              <div className="flex items-center gap-3">
+                <Activity size={16} className={activeTab === 'Finance' ? 'text-accent-2' : ''} />
+                Finance Center
+              </div>
+            </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Aptitude' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Aptitude')}>
+              <div className="flex items-center gap-3">
+                <BookOpen size={16} className={activeTab === 'Aptitude' ? 'text-accent-2' : ''} />
+                Aptitude Vault
+              </div>
+            </div>
+            <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'AI Vault' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('AI Vault')}>
+              <div className="flex items-center gap-3">
+                <Brain size={16} className={activeTab === 'AI Vault' ? 'text-accent-2' : ''} />
+                Learning Vault (AI)
+              </div>
+            </div>
             <div className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-[13px] font-medium transition-all ${activeTab === 'Arcade' ? 'bg-accent-dim text-accent-2 font-semibold' : 'text-text-3 hover:bg-surface-2'}`} onClick={() => setActiveTab('Arcade')}>
               <div className="flex items-center gap-3">
                 <Globe size={16} className={activeTab === 'Arcade' ? 'text-accent-2' : ''} />
@@ -1125,6 +1153,11 @@ export default function CollabDashboard() {
               </div>
             </div>
           )}
+
+          {activeTab === 'Duo Hub' && <CoursesHub activeUser={activeUser} />}
+          {activeTab === 'Finance' && <FinanceCenter activeUser={activeUser} />}
+          {activeTab === 'Aptitude' && <AptitudeVault activeUser={activeUser} />}
+          {activeTab === 'AI Vault' && <AILearningVault activeUser={activeUser} />}
 
         </div>
       </main>
